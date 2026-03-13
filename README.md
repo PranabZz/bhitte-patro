@@ -1,6 +1,6 @@
 # Bhitte-Patro
 
-**Bhitte-Patro** is a super light Nepali calendar menu app for MAC only that shows exactly what you need current Bikram Sambat date, month view, and key calendar info quickly and efficiently.
+**Bhitte-Patro** is a super light Nepali calendar menu app for macOs only that shows exactly what you need current Bikram Sambat date, month view, and key calendar info quickly and efficiently.
 
 ## Features
 
