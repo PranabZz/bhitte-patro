@@ -302,11 +302,14 @@ struct VCenterView: View {
                     .buttonStyle(.link).foregroundColor(.red)
                 Spacer()
                 
-                Button("Date conversion") {
+                Button(showDateConversion ? "BS Calendar" : "Date conversion") {
                     showDateConversion.toggle()
                 }
                 .font(.caption2)
-                .foregroundColor(.secondary)            }
+                .foregroundColor(.secondary)
+                .background(Color(.systemBlue))
+                .cornerRadius(4)
+            }
         }
         .padding()
         .frame(width: 280)
