@@ -1,25 +1,53 @@
-# Bhitte-Patro
+# Bhitte Patro
 
-**Bhitte-Patro** is a super light Nepali calendar menu app for macOs only that shows exactly what you need current Bikram Sambat date, month view, and key calendar info quickly and efficiently.
+<p align="center">
+  <img src="NepaliPatro/Assets.xcassets/AppIcon.appiconset/icon-mac-128x128.png" width="128" alt="Bhitte Patro Logo">
+</p>
 
-## Features
+<p align="center">
+  <strong>Bhitte Patro</strong> is a lightweight Nepali calendar menu bar application for macOS. It provides quick access to the current Bikram Sambat date, a full month view, and essential calendar information directly from your menu bar.
+</p>
 
-- Displays current date in Bikram Sambat
-- Full month view at a glance
-- Minimal, lightweight, and fast
-- Lives in the menu bar for easy access
-- Shows upcomming holidays ( TODO )
-- Marks sepcial days for you and help set reminders ( TODO )
-- Time-zone conversion date and time ( TODO )
+---
 
-## Screenshots
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/065fe16e-459a-4a95-aeb3-4ac4072cb1d1" width="400" alt="Main App Screenshot">
+  <br>
+  <em>Main Application Interface</em>
+</p>
 
-**Main App:**  
-![App Screenshot](https://github.com/user-attachments/assets/065fe16e-459a-4a95-aeb3-4ac4072cb1d1)
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/f1d76a3d-48e6-4f24-a895-6f5a263e7735" width="300" alt="Menu Icon Screenshot">
+  <br>
+  <em>Discreet Menu Bar Integration</em>
+</p>
 
-**Menu Icon:**  
-![Menu Icon](https://github.com/user-attachments/assets/f1d76a3d-48e6-4f24-a895-6f5a263e7735)
+---
+
+## About Bhitte Patro
+
+Bhitte Patro (Nepali: भित्ते पात्रो, meaning "Wall Calendar") is designed for those who need instant access to the Nepali calendar (Bikram Sambat) without the need for bulky applications or web searches. It sits perfectly in your macOS menu bar, staying out of your way until you need it.
+
+### Core Features
+
+- **Menu Bar Integration:** Access the calendar instantly with a single click.
+- **Bikram Sambat Date:** View the current date in the BS system at a glance.
+- **Full Month View:** A clean and simple layout showing the entire month's dates.
+- **Minimalist Design:** Fast, lightweight, and native to macOS.
+
+### Roadmap
+
+- [ ] **Upcoming Holidays:** Integration of major Nepali holidays and public breaks.
+- [ ] **Custom Reminders:** Set notifications for special days and personal events.
+- [ ] **Date Conversion:** Built-in tool for AD to BS and BS to AD conversion.
+- [ ] **Time-zone Support:** Quick conversion for various time zones.
+
+## Installation
+
+1. Download the latest release.
+2. Drag **Bhitte Patro** to your Applications folder.
+3. Open the app to see the icon in your menu bar.
 
 ## License
 
-MIT License
+This project is licensed under the MIT License.

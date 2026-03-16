@@ -15,6 +15,11 @@ struct BSDate: Equatable {
 }
 
 // MARK: - Calendar Engine
+struct CalendarData: Codable {
+    let monthDaysData: [String: [Int]]
+    let holidays: [String: [String: [String: [String]]]]
+}
+
 class NepaliCalendar {
     static let shared = NepaliCalendar()
     
@@ -28,187 +33,56 @@ class NepaliCalendar {
     private let anchorDay = 1
     private let anchorWeekday = 1
     
-    private let monthDaysData: [Int: [Int]] = [
-        2060: [31,31,32,32,31,30,30,29,30,29,30,30],
-        2061: [31,32,31,32,31,30,30,30,29,29,30,31],
-        2062: [31,31,31,32,31,31,29,30,29,30,29,31],
-        2063: [31,31,32,31,31,31,30,29,30,29,30,30],
-        2064: [31,31,32,32,31,30,30,29,30,29,30,30],
-        2065: [31,32,31,32,31,30,30,30,29,29,30,31],
-        2066: [31,31,31,32,31,31,29,30,30,29,29,31],
-        2067: [31,31,32,31,31,31,30,29,30,29,30,30],
-        2068: [31,31,32,32,31,30,30,29,30,29,30,30],
-        2069: [31,32,31,32,31,30,30,30,29,29,30,31],
-        2070: [31,31,31,32,31,31,29,30,30,29,30,30],
-        2071: [31,31,32,31,31,31,30,29,30,29,30,30],
-        2072: [31,32,31,32,31,30,30,29,30,29,30,30],
-        2073: [31,32,31,32,31,30,30,30,29,29,30,31],
-        2074: [31,31,31,32,31,31,30,29,30,29,30,30],
-        2075: [31,31,32,31,31,31,30,29,30,29,30,30],
-        2076: [31,32,31,32,31,30,30,30,29,29,30,30],
-        2077: [31,32,31,32,31,30,30,30,29,30,29,31],
-        2078: [31,31,31,32,31,31,30,29,30,29,30,30],
-        2079: [31,31,32,31,31,31,30,29,30,29,30,30],
-        2080: [31,32,31,32,31,30,30,30,29,29,30,30],
-        2081: [31,32,31,32,31,30,30,30,29,30,29,31],
-        2082: [31,31,32,31,31,30,30,30,29,30,30,30],
-        2083: [31,31,32,31,31,30,30,30,29,30,30,30],
-        2084: [31,31,32,31,31,30,30,30,29,30,30,30],
-        2085: [31,32,31,32,30,31,30,30,29,30,30,30],
-    ]
+    private var monthDaysData: [Int: [Int]] = [:]
+    private var holidays: [Int: [Int: [Int: [String]]]] = [:]
     
-    // MARK: Holidays
-    enum HolidayID: String, CaseIterable {
-        case newYear = "नयाँ वर्ष"
-        case bisketJatra = "बिस्का जात्रा"
-        case meshaSankranti = "मेष संक्रान्ति"
-        case labourDay = "अन्तर्राष्ट्रिय श्रमिक दिवस"
-        case ratoMatsyendranath = "रातो मत्स्येन्द्रनाथ रथयात्रा"
-        case regionalLanguageDay = "प्रादेशिक भाषा दिवस"
-        case kiratReformDay = "किरात समाज सुधार दिवस"
-        case buddhaJayanti = "बुद्ध जयन्ती"
-        case ubhauli = "उभौली पर्व"
-        case chandiPurnima = "चण्डी पूर्णिमा"
-        case republicDay = "गणतन्त्र दिवस"
-        case bhotoJatra = "भोटो जात्रा (काठमाडौँ उपत्यका मात्र)"
-        case sithiNakha = "सिठी नखः"
-        case bakraEid = "बकर इद"
-        case janaiPurnima = "जनै पूर्णिमा"
-        case rakshaBandhan = "रक्षाबन्धन"
-        case rishiTarpani = "ऋषितर्पणी"
-        case gaijatra = "गाइजात्रा (बागमती प्रदेश मात्र)"
-        case krishnaJanmashtami = "श्री कृष्ण जन्माष्टमी"
-        case gauraStart = "गौरा पर्व सुरु"
-        case haritalikaTeej = "हरितालिका तीज"
-        case gaura = "गौरा पर्व"
-        case nijamatiDiwas = "निजामती सेवा दिवस"
-        case indraJatra = "इन्द्रजात्रा"
-        case anantaChaturdashi = "अनन्त चतुर्दशी"
-        case jitiya = "जितिया पर्व"
-        case vishwakarmaPuja = "विश्वकर्मा पूजा"
-        case nationalScienceDay = "राष्ट्रिय विज्ञान दिवस"
-        case constitutionDay = "संविधान दिवस"
-        case ghatasthapana = "घटस्थापना"
-        case navaratriStart = "नवरात्र आरम्भ"
-        case phulpati = "फूलपाती"
-        case mahaAshtami = "महाअष्टमी"
-        case mahanavami = "महानवमी"
-        case vijayaDashami = "विजया दशमी"
-        case papankushaEkadashi = "पापांकुशा एकादशी"
-        case dashainHoliday = "दशैँ बिदा"
-        case kojagratPurnima = "कोजाग्रत पूर्णिमा"
-        case laxmiPuja = "लक्ष्मी पूजा"
-        case kukurTihar = "कुकुर तिहार"
-        case narakChaturdashi = "नरक चतुर्दशी"
-        case tiharHoliday = "तिहार बिदा"
-        case gaiPuja = "गाईपूजा"
-        case govardhanPuja = "गोवर्द्धन पूजा"
-        case mhaPuja = "म्ह पूजा"
-        case nepalSambatStart = "नेपाल संवत् ११४६ आरम्भ"
-        case bhaiTika = "भाई टिका"
-        case kijaPuja = "किजा पूजा"
-        case chhath = "छठ पर्व"
-        case guruNanakJayanti = "गुरु नानक जयन्ती"
-        case falgunandaJayanti = "फाल्गुनन्द जयन्ती"
-        case intlDisabilityDay = "अन्तर्राष्ट्रिय अपाङ्गता दिवस"
-        case udhauli = "उधौली पर्व"
-        case yomariPunhi = "योमरी पुन्ही"
-        case dhanyaPurnima = "धान्य पूर्णिमा"
-        case christmas = "क्रिसमस डे"
-        case tamuLhosar = "तमु ल्होसार"
-        case prithviJayanti = "पृथ्वी जयन्ती"
-        case nationalUnityDay = "राष्ट्रिय एकता दिवस"
-        case magheSankranti = "माघे संक्रान्ति"
-        case maghiParva = "माघी पर्व"
-        case sonamLhosar = "सोनाम ल्होसार"
-        case basantPanchami = "वसन्त पञ्चमी"
-        case saraswatiPuja = "सरस्वती पूजा"
-        case martyrDay = "शहीद दिवस"
-        case mahashivaratri = "महाशिवरात्रि"
-        case nepalArmyDay = "नेपाली सेना दिवस"
-        case ghodeJatra = "घोडेजात्रा (काठमाडौँ उपत्यका मात्र)"
-        case ramNavami = "राम नवमी"
+    init() {
+        loadCalendarData()
     }
     
-    // If you prefer, you can keep a separate names map. Using rawValue keeps it simple.
-    private func names(for ids: [HolidayID]) -> String {
-        ids.map { $0.rawValue }.joined(separator: " / ")
+    private func loadCalendarData() {
+        guard let url = Bundle.main.url(forResource: "calendar", withExtension: "json") ??
+                        Bundle.main.url(forResource: "calendar", withExtension: "json", subdirectory: "data") else {
+            print("Failed to find calendar.json in bundle")
+            return
+        }
+        
+        do {
+            let data = try Data(contentsOf: url)
+            let decodedData = try JSONDecoder().decode(CalendarData.self, from: data)
+            
+            // Convert monthDaysData
+            for (yearStr, days) in decodedData.monthDaysData {
+                if let year = Int(yearStr) {
+                    self.monthDaysData[year] = days
+                }
+            }
+            
+            for (yearStr, months) in decodedData.holidays {
+                if let year = Int(yearStr) {
+                    var yearHolidays: [Int: [Int: [String]]] = [:]
+                    for (monthStr, days) in months {
+                        if let month = Int(monthStr) {
+                            var monthHolidays: [Int: [String]] = [:]
+                            for (dayStr, names) in days {
+                                if let day = Int(dayStr) {
+                                    monthHolidays[day] = names
+                                }
+                            }
+                            yearHolidays[month] = monthHolidays
+                        }
+                    }
+                    self.holidays[year] = yearHolidays
+                }
+            }
+        } catch {
+            print("Error loading/decoding calendar.json: \(error)")
+        }
     }
-    
-    // year -> month -> day -> [HolidayID]
-    private let holidays: [Int: [Int: [Int: [HolidayID]]]] = [
-        2082: [
-            1: [
-                1: [.newYear, .bisketJatra, .meshaSankranti],
-                18: [.labourDay, .ratoMatsyendranath],
-                24: [.regionalLanguageDay, .kiratReformDay],
-                29: [.buddhaJayanti, .ubhauli, .chandiPurnima]
-            ],
-            2: [
-                15: [.republicDay],
-                18: [.bhotoJatra, .sithiNakha],
-                24: [.bakraEid]
-            ],
-            4: [
-                24: [.janaiPurnima, .rakshaBandhan, .rishiTarpani],
-                25: [.gaijatra],
-                31: [.krishnaJanmashtami, .gauraStart]
-            ],
-            5: [
-                10: [.haritalikaTeej],
-                15: [.gaura, .nijamatiDiwas],
-                21: [.indraJatra, .anantaChaturdashi],
-                30: [.jitiya]
-            ],
-            6: [
-                1: [.vishwakarmaPuja, .nationalScienceDay],
-                3: [.constitutionDay],
-                6: [.ghatasthapana, .navaratriStart],
-                13: [.phulpati],
-                14: [.mahaAshtami],
-                15: [.mahanavami],
-                16: [.vijayaDashami],
-                17: [.papankushaEkadashi, .dashainHoliday],
-                18: [.dashainHoliday, .kojagratPurnima]
-            ],
-            7: [
-                3: [.laxmiPuja, .kukurTihar, .narakChaturdashi],
-                4: [.tiharHoliday, .gaiPuja],
-                5: [.govardhanPuja, .mhaPuja, .nepalSambatStart],
-                6: [.bhaiTika, .kijaPuja],
-                7: [.tiharHoliday],
-                10: [.chhath],
-                19: [.guruNanakJayanti],
-                25: [.falgunandaJayanti]
-            ],
-            8: [
-                17: [.intlDisabilityDay],
-                18: [.udhauli, .yomariPunhi, .dhanyaPurnima]
-            ],
-            9: [
-                10: [.christmas],
-                15: [.tamuLhosar],
-                27: [.prithviJayanti, .nationalUnityDay]
-            ],
-            10: [
-                1: [.magheSankranti, .maghiParva],
-                5: [.sonamLhosar],
-                9: [.basantPanchami, .saraswatiPuja],
-                16: [.martyrDay]
-            ],
-            11: [
-                15: [.mahashivaratri, .nepalArmyDay]
-            ],
-            12: [
-                4: [.ghodeJatra],
-                13: [.ramNavami]
-            ]
-        ]
-    ]
     
     func holidayText(year: Int, month: Int, day: Int) -> String? {
-        guard let ids = holidays[year]?[month]?[day], !ids.isEmpty else { return nil }
-        return names(for: ids)
+        guard let names = holidays[year]?[month]?[day], !names.isEmpty else { return nil }
+        return names.joined(separator: " / ")
     }
     
     func convertToBSDate(from date: Date) -> BSDate? {
@@ -251,6 +125,7 @@ class NepaliCalendar {
     }
 }
 
+
 // MARK: - App
 @main
 struct NepaliPatroApp: App {
@@ -269,6 +144,37 @@ struct NepaliPatroApp: App {
     }
 }
 
+struct DateStepperRow: View {
+    let label: String
+    let font: Font
+    let onDecrement: () -> Void
+    let onIncrement: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Button(action: onDecrement) {
+                Image(systemName: "chevron.left")
+                    .font(.caption.weight(.semibold))
+                    .frame(width: 26, height: 26)
+                    .background(.quaternary, in: Circle())
+            }
+            .buttonStyle(.plain)
+
+            Text(label)
+                .font(font)
+                .frame(minWidth: 64, alignment: .center)
+                .monospacedDigit()
+
+            Button(action: onIncrement) {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .frame(width: 26, height: 26)
+                    .background(.quaternary, in: Circle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
 // MARK: - View
 struct VCenterView: View {
     @State private var displayYear: Int
@@ -293,27 +199,74 @@ struct VCenterView: View {
         VStack(spacing: 15) {
             // Header
             if showDateConversion {
-                HStack(spacing: 30){
-                    // Ad Date we take default
-                    VStack(alignment: .leading, spacing: 8){
-                        Text("AD Date").font(.caption).foregroundColor(.secondary)
-                        DatePicker(
-                                "",
-                                selection: $adDate,
-                                displayedComponents: .date)
-                                .labelsHidden()
-                                .onChange(of: adDate){ _, newValue in
-                                    if let converted = NepaliCalendar.shared.convertToBSDate(from: newValue){
-                                        bsDate = converted
-                                    }
-                                }
-                        }
-                    // BS date :
-                    VStack(alignment: .leading, spacing: 8){
-                        Text("BS Date").font(.caption).foregroundColor(.secondary)
-                        Text("\(NepaliCalendar.shared.months[bsDate.month - 1]) \(NepaliCalendar.shared.toNepaliDigits(bsDate.year)) - \(NepaliCalendar.shared.toNepaliDigits(bsDate.day))").font(.caption).foregroundColor(.secondary).padding(10)
+                HStack(alignment: .top, spacing: 0) {
+
+                    // AD Date — custom stepper
+                    VStack(alignment: .center, spacing: 10) {
+                        Label("AD Date", systemImage: "calendar")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        // Month
+                        DateStepperRow(
+                            label: adDate.formatted(.dateTime.month(.wide)),
+                            font: .subheadline,
+                            onDecrement: { adDate = Calendar.current.date(byAdding: .month, value: -1, to: adDate) ?? adDate },
+                            onIncrement: { adDate = Calendar.current.date(byAdding: .month, value:  1, to: adDate) ?? adDate }
+                        )
+
+                        // Year
+                        DateStepperRow(
+                            label: adDate.formatted(.dateTime.year()),
+                            font: .title3.weight(.medium),
+                            onDecrement: { adDate = Calendar.current.date(byAdding: .year, value: -1, to: adDate) ?? adDate },
+                            onIncrement: { adDate = Calendar.current.date(byAdding: .year, value:  1, to: adDate) ?? adDate }
+                        )
+
+                        // Day
+                        DateStepperRow(
+                            label: adDate.formatted(.dateTime.day()),
+                            font: .subheadline,
+                            onDecrement: { adDate = Calendar.current.date(byAdding: .day, value: -1, to: adDate) ?? adDate },
+                            onIncrement: { adDate = Calendar.current.date(byAdding: .day, value:  1, to: adDate) ?? adDate }
+                        )
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .padding(.leading, 16)
+                    .onChange(of: adDate) { _, newValue in
+                        if let converted = NepaliCalendar.shared.convertToBSDate(from: newValue) {
+                            bsDate = converted
+                        }
+                    }
+
+
+                    // BS Date — mirror layout, display only
+                    VStack(alignment: .center, spacing: 10) {
+                        Label("BS Date", systemImage: "sun.max.fill")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Text(NepaliCalendar.shared.months[bsDate.month - 1])
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(height: 26)
+
+                        Text(NepaliCalendar.shared.toNepaliDigits(bsDate.year))
+                            .font(.title2.weight(.medium))
+                            .font(.title2.weight(.medium))
+                            .frame(height: 26)
+
+                        Text(NepaliCalendar.shared.toNepaliDigits(bsDate.day))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(height: 28)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
                 }
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.separator, lineWidth: 0.5))
             } else {
                 HStack {
                     Text("\(NepaliCalendar.shared.months[displayMonth - 1]) \(NepaliCalendar.shared.toNepaliDigits(displayYear))")
@@ -442,13 +395,17 @@ struct VCenterView: View {
                     .buttonStyle(.link).foregroundColor(.red)
                 Spacer()
                 
-                Button(showDateConversion ? "BS Calendar" : "Date conversion") {
-                    showDateConversion.toggle()
+                Button(action: { showDateConversion.toggle() }) {
+                    Image(systemName: "arrow.2.squarepath")
+                        .imageScale(.medium)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundColor(.secondary)
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
                 }
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .background(Color(.systemBlue))
-                .cornerRadius(4)
+                .buttonStyle(.plain)
+                .help(showDateConversion ? "Show BS Calendar" : "Show Date Conversion")
+                .accessibilityLabel(showDateConversion ? "Show BS Calendar" : "Show Date Conversion")
             }
         }
         .padding()
