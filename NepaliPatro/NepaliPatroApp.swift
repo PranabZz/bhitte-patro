@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 // MARK: - Models
 struct BSDate: Equatable {
@@ -125,17 +126,35 @@ class NepaliCalendar {
     }
 }
 
+class DateUpdater: ObservableObject {
+    @Published var currentDate = Date()
+    private var cancellables = Set<AnyCancellable>()
+    
+    init() {
+        // Listen for midnight changes
+        NotificationCenter.default.publisher(for: .NSCalendarDayChanged)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.currentDate = Date()
+            }
+            .store(in: &cancellables)
+    }
+}
+
 
 // MARK: - App
 @main
 struct NepaliPatroApp: App {
+    @StateObject private var dateUpdater = DateUpdater()
+    
     var body: some Scene {
         MenuBarExtra {
             VCenterView()
+                .environmentObject(dateUpdater)
         } label: {
             HStack {
                 Image(systemName: "calendar")
-                if let today = NepaliCalendar.shared.convertToBSDate(from: Date()) {
+                if let today = NepaliCalendar.shared.convertToBSDate(from: dateUpdater.currentDate) {
                     Text(NepaliCalendar.shared.toNepaliDigits(today.day))
                 }
             }
@@ -165,7 +184,7 @@ struct DateStepperRow: View {
                 .frame(minWidth: 64, alignment: .center)
                 .monospacedDigit()
 
-            Button(action: onIncrement) {
+            Button(action: { onIncrement() }) {
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
                     .frame(width: 26, height: 26)
@@ -177,11 +196,12 @@ struct DateStepperRow: View {
 }
 // MARK: - View
 struct VCenterView: View {
+    @EnvironmentObject var dateUpdater: DateUpdater
     @State private var displayYear: Int
     @State private var displayMonth: Int
     @State private var selectedDate: BSDate?
     @State private var showDateConversion = false
-    private let today: BSDate?
+    @State private var today: BSDate?
     @State private var adDate = Date()
     @State private var bsDate = NepaliCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
     
@@ -190,8 +210,8 @@ struct VCenterView: View {
         let bsNow = NepaliCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
         _displayYear = State(initialValue: bsNow.year)
         _displayMonth = State(initialValue: bsNow.month)
-        self.today = bsNow
-        self._selectedDate = State(initialValue: bsNow) // default to today
+        _today = State(initialValue: bsNow)
+        _selectedDate = State(initialValue: bsNow) // default to today
     }
 
     
@@ -275,8 +295,8 @@ struct VCenterView: View {
                     // show button take user to current month
                     Button("आज") {
                         if let today = today {
-                            _displayYear.wrappedValue = today.year
-                            _displayMonth.wrappedValue = today.month
+                            displayYear = today.year
+                            displayMonth = today.month
                             selectedDate = today
                         }
                     }.foregroundStyle(Color(.red))
@@ -410,6 +430,22 @@ struct VCenterView: View {
         }
         .padding()
         .frame(width: 280)
+        .onReceive(dateUpdater.$currentDate) { newDate in
+            if let bsToday = NepaliCalendar.shared.convertToBSDate(from: newDate) {
+                // Check if the previous 'today' was the same as the month we were displaying
+                let wasShowingToday = (today?.month == displayMonth && today?.year == displayYear)
+                
+                self.today = bsToday
+                
+                // If we were showing the month that just changed (and it's now a different month/year)
+                // or if we want to force update the calendar view when the day changes
+                if wasShowingToday {
+                    displayMonth = bsToday.month
+                    displayYear = bsToday.year
+                    selectedDate = bsToday
+                }
+            }
+        }
     }
 
     private func navigate(_ delta: Int) {
