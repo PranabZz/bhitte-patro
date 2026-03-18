@@ -7,6 +7,8 @@
 
 import SwiftUI
 import Combine
+import Foundation
+
 
 // MARK: - Models
 struct BSDate: Equatable {
@@ -21,6 +23,8 @@ struct CalendarData: Codable {
     let holidays: [String: [String: [String: [String]]]]
     let tithi: [String: [String: [Int]]]
 }
+
+
 
 class NepaliCalendar {
     static let shared = NepaliCalendar()
@@ -132,6 +136,46 @@ class NepaliCalendar {
         return BSDate(year: year, month: month, day: day)
     }
     
+    func convertToADDate(from bsDate: BSDate) -> Date? {
+        let calendar = Calendar(identifier: .gregorian)
+        
+        // Anchor AD date corresponding to BS anchor
+        var anchorComps = DateComponents()
+        anchorComps.year = 2003   // AD year of BS anchor
+        anchorComps.month = 4
+        anchorComps.day = 14
+        guard let anchorADDate = calendar.date(from: anchorComps) else { return nil }
+        
+        // Anchor BS date components
+        var year = anchorYear       // e.g., 2060
+        var month = anchorMonth     // e.g., 1
+        var day = anchorDay         // e.g., 1
+        
+        // Calculate number of days from anchor BS date to target BS date
+        var totalDays = 0
+        
+        // First, sum full years
+        while year < bsDate.year {
+            for m in 1...12 {
+                totalDays += daysInMonth(year: year, month: m)
+            }
+            year += 1
+        }
+        
+        // Then sum months in current year
+        while month < bsDate.month {
+            totalDays += daysInMonth(year: year, month: month)
+            month += 1
+        }
+        
+        // Then add days in current month
+        totalDays += (bsDate.day - day)
+        
+        // Add totalDays to anchor AD date
+        guard let adDate = calendar.date(byAdding: .day, value: totalDays, to: anchorADDate) else { return nil }
+        
+        return adDate
+    }
     func daysInMonth(year: Int, month: Int) -> Int {
         return monthDaysData[year]?[month - 1] ?? 30
     }
@@ -167,11 +211,19 @@ class DateUpdater: ObservableObject {
 }
 
 
+enum CalendarViewMode {
+    case calendar
+    case dateConversion
+    case somethingElse
+}
+
+
+
 // MARK: - App
 @main
 struct NepaliPatroApp: App {
     @StateObject private var dateUpdater = DateUpdater()
-    
+
     var body: some Scene {
         MenuBarExtra {
             VCenterView()
@@ -199,7 +251,7 @@ struct DateStepperRow: View {
             Button(action: onDecrement) {
                 Image(systemName: "chevron.left")
                     .font(.caption.weight(.semibold))
-                    .frame(width: 26, height: 26)
+                    .frame(width: 32, height: 32)
                     .background(.quaternary, in: Circle())
             }
             .buttonStyle(.plain)
@@ -212,7 +264,7 @@ struct DateStepperRow: View {
             Button(action: { onIncrement() }) {
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
-                    .frame(width: 26, height: 26)
+                    .frame(width: 32, height: 32)
                     .background(.quaternary, in: Circle())
             }
             .buttonStyle(.plain)
@@ -221,6 +273,7 @@ struct DateStepperRow: View {
 }
 // MARK: - View
 struct VCenterView: View {
+    
     @EnvironmentObject var dateUpdater: DateUpdater
     @State private var displayYear: Int
     @State private var displayMonth: Int
@@ -229,7 +282,8 @@ struct VCenterView: View {
     @State private var today: BSDate?
     @State private var adDate = Date()
     @State private var bsDate = NepaliCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
-    
+    @State private var viewMode: CalendarViewMode = .calendar
+
     
     init() {
         let bsNow = NepaliCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
@@ -243,204 +297,15 @@ struct VCenterView: View {
     var body: some View {
         VStack(spacing: 15) {
             // Header
-            if showDateConversion {
-                HStack(alignment: .top, spacing: 0) {
-
-                    // AD Date — custom stepper
-                    VStack(alignment: .center, spacing: 10) {
-                        Label("AD Date", systemImage: "calendar")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary)
-
-                        // Month
-                        DateStepperRow(
-                            label: adDate.formatted(.dateTime.month(.wide)),
-                            font: .subheadline,
-                            onDecrement: { adDate = Calendar.current.date(byAdding: .month, value: -1, to: adDate) ?? adDate },
-                            onIncrement: { adDate = Calendar.current.date(byAdding: .month, value:  1, to: adDate) ?? adDate }
-                        )
-
-                        // Year
-                        DateStepperRow(
-                            label: adDate.formatted(.dateTime.year()),
-                            font: .title3.weight(.medium),
-                            onDecrement: { adDate = Calendar.current.date(byAdding: .year, value: -1, to: adDate) ?? adDate },
-                            onIncrement: { adDate = Calendar.current.date(byAdding: .year, value:  1, to: adDate) ?? adDate }
-                        )
-
-                        // Day
-                        DateStepperRow(
-                            label: adDate.formatted(.dateTime.day()),
-                            font: .subheadline,
-                            onDecrement: { adDate = Calendar.current.date(byAdding: .day, value: -1, to: adDate) ?? adDate },
-                            onIncrement: { adDate = Calendar.current.date(byAdding: .day, value:  1, to: adDate) ?? adDate }
-                        )
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .padding(.leading, 16)
-                    .onChange(of: adDate) { _, newValue in
-                        if let converted = NepaliCalendar.shared.convertToBSDate(from: newValue) {
-                            bsDate = converted
-                        }
-                    }
-
-
-                    // BS Date — mirror layout, display only
-                    VStack(alignment: .center, spacing: 10) {
-                        Label("BS Date", systemImage: "sun.max.fill")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary)
-
-                        Text(NepaliCalendar.shared.months[bsDate.month - 1])
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .frame(height: 26)
-
-                        Text(NepaliCalendar.shared.toNepaliDigits(bsDate.year))
-                            .font(.title2.weight(.medium))
-                            .font(.title2.weight(.medium))
-                            .frame(height: 26)
-
-                        Text(NepaliCalendar.shared.toNepaliDigits(bsDate.day))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .frame(height: 28)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                }
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.separator, lineWidth: 0.5))
-            } else {
-                HStack {
-                    Text("\(NepaliCalendar.shared.months[displayMonth - 1]) \(NepaliCalendar.shared.toNepaliDigits(displayYear))")
-                        .font(.system(size: 18, weight: .bold))
-                    Spacer()
-                    // show button take user to current month
-                    Button("आज") {
-                        if let today = today {
-                            displayYear = today.year
-                            displayMonth = today.month
-                            selectedDate = today
-                        }
-                    }.foregroundStyle(Color(.red))
-                    
-                    HStack(spacing: 12) {
-                        Button(action: { navigate(-1) }) { Image(systemName: "chevron.left") }
-                        Button(action: { navigate(1) })  { Image(systemName: "chevron.right") }
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 5)
-                
-                
-                
-                // Days of week
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7)) {
-                    ForEach(NepaliCalendar.shared.weekDays, id: \.self) { day in
-                        Text(day).font(.caption2).fontWeight(.black).foregroundColor(.secondary)
-                    }
-                }
-                
-                // Grid Logic
-                let firstWeekday = NepaliCalendar.shared.firstWeekday(year: displayYear, month: displayMonth)
-                let daysInMonth = NepaliCalendar.shared.daysInMonth(year: displayYear, month: displayMonth)
-                
-                // Previous month info for leading placeholders
-                let prevMonth = displayMonth == 1 ? 12 : displayMonth - 1
-                let prevYear  = displayMonth == 1 ? displayYear - 1 : displayYear
-                let daysInPrevMonth = NepaliCalendar.shared.daysInMonth(year: prevYear, month: prevMonth)
-                
-                // Always use exactly 35 cells; expand to 42 only when content overflows
-                let totalNeeded    = firstWeekday + daysInMonth
-                let totalGridCells = totalNeeded > 35 ? 42 : 35
-                let trailingCount  = totalGridCells - totalNeeded   // always >= 0
-                
-                // Build a flat array of (label, isCurrentMonth, isToday, numericDay?, isHoliday)
-                let cells: [(String, Bool, Bool, Int?, Bool)] = {
-                    var result: [(String, Bool, Bool, Int?, Bool)] = []
-                    
-                    // Leading days from previous month
-                    for i in 0..<firstWeekday {
-                        let day = daysInPrevMonth - (firstWeekday - 1) + i
-                        result.append((NepaliCalendar.shared.toNepaliDigits(day), false, false, nil, false))
-                    }
-                    
-                    // Current month days
-                    for day in 1...daysInMonth {
-                        let isToday = today?.day == day &&
-                        today?.month == displayMonth &&
-                        today?.year == displayYear
-                        let isHoliday = NepaliCalendar.shared.holidayText(year: displayYear, month: displayMonth, day: day) != nil
-                        result.append((NepaliCalendar.shared.toNepaliDigits(day), true, isToday, day, isHoliday))
-                    }
-                    
-                    // Trailing days from next month
-                    for day in 1...max(1, trailingCount) where day <= trailingCount {
-                        result.append((NepaliCalendar.shared.toNepaliDigits(day), false, false, nil, false))
-                    }
-                    
-                    return result
-                }()
-                
-                let columns = Array(repeating: GridItem(.fixed(32), spacing: 8), count: 7)
-                
-                LazyVGrid(columns: columns, spacing: 8) {
-                    ForEach(Array(cells.enumerated()), id: \.offset) { index, cell in
-                        let (label, isCurrent, isToday, numericDay, isHoliday) = cell
-                        let isSelected: Bool = {
-                            guard isCurrent, let d = numericDay, let sel = selectedDate else { return false }
-                            return sel.year == displayYear && sel.month == displayMonth && sel.day == d
-                        }()
-                        
-                        // Crimson-like color
-                        let crimson = Color(.red)
-                        
-                        Text(label)
-                            .font(isCurrent ? .system(size: 14, design: .rounded) : .caption2)
-                            .frame(width: 32, height: 32)
-                            .background(isSelected ? crimson : (isToday ? Color.red : Color.clear))
-                            .foregroundColor(
-                                isSelected || isToday ? .white :
-                                    (index % 7 == 6 || isHoliday) ? .red : // Saturday or holiday
-                                    (isCurrent ? .primary : .secondary.opacity(0.4))
-                            )
-                            .clipShape(Circle())
-                            .transition(.opacity.animation(.easeInOut(duration: 0.25)))
-                            .contentShape(Rectangle()) // make the whole frame tappable
-                            .onTapGesture {
-                                guard isCurrent, let d = numericDay else { return }
-                                selectedDate = BSDate(year: displayYear, month: displayMonth, day: d)
-                            }
-                    }
-                }
-                
-                // Inline holiday/tithi text
-                if let sel = selectedDate {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("\(NepaliCalendar.shared.months[sel.month - 1]) \(NepaliCalendar.shared.toNepaliDigits(sel.day)), \(NepaliCalendar.shared.toNepaliDigits(sel.year))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            if let hText = NepaliCalendar.shared.holidayText(year: sel.year, month: sel.month, day: sel.day) {
-                                Text(hText)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(Color.primary)
-                            }
-                            
-                            if let tithi = NepaliCalendar.shared.tithiText(year: sel.year, month: sel.month, day: sel.day) {
-                                Text(tithi)
-                                
-                                    .foregroundColor(.purple)
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 4)
-                }
+            switch viewMode {
+                case .dateConversion:
+                    DateConversionView(adDate: $adDate, bsDate: $bsDate)
+                case .calendar:
+                    CalendarView(displayYear: $displayYear, displayMonth: $displayMonth, selectedDate: $selectedDate, today: $today, adDate: $adDate, bsDate: $bsDate)
+                case .somethingElse:
+                    Text("hello")
             }
+            
             Divider()
             
             HStack {
@@ -448,7 +313,7 @@ struct VCenterView: View {
                     .buttonStyle(.link).foregroundColor(.red)
                 Spacer()
                 
-                Button(action: { showDateConversion.toggle() }) {
+                Button(action: { viewMode == .dateConversion ? (viewMode = .calendar) : (viewMode = .dateConversion )}) {
                     Image(systemName: "arrow.2.squarepath")
                         .imageScale(.medium)
                         .symbolRenderingMode(.hierarchical)
@@ -462,16 +327,13 @@ struct VCenterView: View {
             }
         }
         .padding()
-        .frame(width: 280)
+        .frame(width: 380)
         .onReceive(dateUpdater.$currentDate) { newDate in
             if let bsToday = NepaliCalendar.shared.convertToBSDate(from: newDate) {
-                // Check if the previous 'today' was the same as the month we were displaying
                 let wasShowingToday = (today?.month == displayMonth && today?.year == displayYear)
                 
                 self.today = bsToday
-                
-                // If we were showing the month that just changed (and it's now a different month/year)
-                // or if we want to force update the calendar view when the day changes
+    
                 if wasShowingToday {
                     displayMonth = bsToday.month
                     displayYear = bsToday.year
