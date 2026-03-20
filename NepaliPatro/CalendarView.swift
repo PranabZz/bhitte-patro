@@ -14,69 +14,121 @@ struct CalendarView: View {
     @Binding var today: BSDate?
     @Binding var adDate: Date
     @Binding var bsDate: BSDate
+    @Binding var viewMode: CalendarViewMode
 
     private let columns: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 0, alignment: .center), count: 7)
     private let rowSpacing: CGFloat = 4
     private let cellCornerRadius: CGFloat = 6
 
     var body: some View {
-        HStack {
-          
-            HStack(spacing: 10) {
+        HStack(spacing: 8) {
+            // Aajha Section
+            Button("आज") {
+                withAnimation {
+                    if let today = today {
+                        displayYear = today.year
+                        displayMonth = today.month
+                        selectedDate = today
+                    }
+                }
+            }
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(.red)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.red.opacity(0.1), in: Capsule())
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 0)
+
+            // Navigation and Date Selectors
+            HStack(spacing: 4) {
+                Button(action: { navigate(-1) }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.red)
+                        .padding(8)
+                        .background(Circle().fill(Color.red.opacity(0.1)))
+                }
+                .buttonStyle(.plain)
+
                 Menu {
                     ForEach(1...12, id: \.self) { month in
                         Button(action: {
                             displayMonth = month
                         }) {
-                            Text(NepaliCalendar.shared.months[month - 1])
+                            HStack {
+                                Text(NepaliCalendar.shared.months[month - 1])
+                                if displayMonth == month {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                }
+                            }
                         }
                     }
                 } label: {
-                    HStack {
-                        Text("\(NepaliCalendar.shared.months[displayMonth - 1]) ")
-                            .font(.system(size: 16, weight: .bold))
-                    }
-                    .padding(8)
-                    .cornerRadius(8)
+                    Text(NepaliCalendar.shared.months[displayMonth - 1])
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.secondary.opacity(0.1)))
                 }
+                .menuStyle(.borderlessButton)
 
                 Menu {
                     ForEach(2060...2085, id: \.self) { year in
                         Button(action: {
                             displayYear = year
                         }) {
-                            Text(NepaliCalendar.shared.toNepaliDigits(year))
+                            HStack {
+                                Text(NepaliCalendar.shared.toNepaliDigits(year))
+                                if displayYear == year {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                }
+                            }
                         }
                     }
                 } label: {
-                    HStack {
-                        Text("\(NepaliCalendar.shared.toNepaliDigits(displayYear)) ")
-                            .font(.system(size: 16, weight: .bold))
-                    }
-                    .padding(8)
-                    .cornerRadius(8)
+                    Text(NepaliCalendar.shared.toNepaliDigits(displayYear))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.secondary.opacity(0.1)))
                 }
+                .menuStyle(.borderlessButton)
+
+                Button(action: { navigate(1) }) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.red)
+                        .padding(8)
+                        .background(Circle().fill(Color.red.opacity(0.1)))
+                }
+                .buttonStyle(.plain)
             }
-            Spacer()
-            Button("आज") {
-                if let today = today {
-                    displayYear = today.year
-                    displayMonth = today.month
-                    selectedDate = today
+
+            Spacer(minLength: 0)
+
+            // Settings Button
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    viewMode = .settings
                 }
-            }.foregroundStyle(Color(.red))
-            
-            HStack(spacing: 12) {
-                Button(action: { navigate(-1) }) { Image(systemName: "chevron.left").foregroundColor(Color(.red)).padding(10).background(
-                    Circle()
-                ) }
-                Button(action: { navigate(1) })  { Image(systemName: "chevron.right").foregroundColor(Color(.red)).padding(10).background(
-                    Circle()
-                )  }
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 32, height: 32)
+                    .background(Color.secondary.opacity(0.15), in: Circle())
             }
             .buttonStyle(.plain)
+            .help("Settings")
         }
         .padding(.horizontal, 10)
+        .padding(.bottom, 10)
         
         LazyVGrid(columns: columns, alignment: .center, spacing: rowSpacing) {
             ForEach(NepaliCalendar.shared.weekDays, id: \.self) { day in
@@ -105,9 +157,11 @@ struct CalendarView: View {
                       alignment: .center,
                       spacing: rowSpacing) {
                 ForEach(Array(cells.enumerated()), id: \.offset) { index, cell in
-                    let isSelected: Bool = {
-                        guard let sel = selectedDate else { return false }
-                        return sel.year == cell.bsYear && sel.month == cell.bsMonth && sel.day == cell.bsDay
+                    let isHighlighted: Bool = {
+                        if let sel = selectedDate {
+                            return sel.year == cell.bsYear && sel.month == cell.bsMonth && sel.day == cell.bsDay
+                        }
+                        return cell.isToday
                     }()
                     
                     let selectionColor = Color(.red)
@@ -124,7 +178,7 @@ struct CalendarView: View {
                     }()
                     
                     ZStack {
-                        if isSelected {
+                        if isHighlighted {
                             RoundedRectangle(cornerRadius: cellCornerRadius)
                                 .fill(selectionColor)
                         } else if cell.isToday {
@@ -140,7 +194,7 @@ struct CalendarView: View {
                             Text(nepaliLabel)
                                 .font(cell.isCurrent ? .system(size: 14, weight: .medium, design: .rounded) : .caption2)
                                 .foregroundColor(
-                                    isSelected ? .white :
+                                    isHighlighted ? .white :
                                     (index % 7 == 6 || cell.isHoliday) ? .red :
                                     (cell.isCurrent ? .primary : .secondary.opacity(0.6))
                                 )
@@ -151,7 +205,7 @@ struct CalendarView: View {
                                 Spacer(minLength: 0)
                                 Text(englishDay)
                                     .font(.system(size: 9, weight: .semibold, design: .rounded))
-                                    .foregroundColor(isSelected ? .white.opacity(0.9) :
+                                    .foregroundColor(isHighlighted ? .white.opacity(0.9) :
                                                      cell.isCurrent ? .secondary : .secondary.opacity(0.5))
                             }
                             .padding(.trailing, 3)
@@ -236,7 +290,7 @@ struct CalendarView: View {
             } else if let today = today, today.year == y, today.month == m {
                 selectedDate = today
             } else {
-                selectedDate = BSDate(year: y, month: m, day: 1)
+                selectedDate = nil
             }
         }
     }

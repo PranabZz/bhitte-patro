@@ -213,33 +213,36 @@ class DateUpdater: ObservableObject {
 
 // Persistable modes with raw values for UserDefaults
 enum CalendarViewMode: String, CaseIterable {
+    case today
     case calendar
-    case dateConversion
-    case somethingElse
+    case settings
     
     var icon: String {
         switch self {
+        case .today: return "sun.max"
         case .calendar: return "calendar"
-        case .dateConversion: return "arrow.2.squarepath"
-        case .somethingElse: return "sun.max"
+        case .settings: return "gearshape"
         }
     }
     
     var title: String {
         switch self {
+        case .today: return "Today"
         case .calendar: return "Calendar"
-        case .dateConversion: return "Converter"
-        case .somethingElse: return "Today"
+        case .settings: return "Settings"
         }
     }
     
     static let defaultsKey = "DefaultCalendarViewMode"
     
-    static func loadDefault() -> CalendarViewMode? {
-        guard let raw = UserDefaults.standard.string(forKey: defaultsKey) else { return nil }
-        return CalendarViewMode(rawValue: raw)
+    static func loadDefault() -> CalendarViewMode {
+        guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+              let mode = CalendarViewMode(rawValue: raw) else {
+            return .calendar
+        }
+        return mode
     }
-    
+
     static func saveDefault(_ mode: CalendarViewMode) {
         UserDefaults.standard.set(mode.rawValue, forKey: defaultsKey)
     }
@@ -303,100 +306,69 @@ struct DateStepperRow: View {
 struct VCenterView: View {
     
     @EnvironmentObject var dateUpdater: DateUpdater
+    @AppStorage("DefaultCalendarViewMode") private var defaultMode: String = "calendar"
+    
     @State private var displayYear: Int
     @State private var displayMonth: Int
     @State private var selectedDate: BSDate?
     @State private var today: BSDate?
     @State private var adDate = Date()
     @State private var bsDate = NepaliCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
-    @State private var viewMode: CalendarViewMode = .calendar
+    @State private var viewMode: CalendarViewMode
+    @State private var previousMode: CalendarViewMode = .calendar
 
+    private var primaryMode: CalendarViewMode {
+        CalendarViewMode(rawValue: defaultMode) ?? .calendar
+    }
     
     init() {
         let bsNow = NepaliCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
         _displayYear = State(initialValue: bsNow.year)
         _displayMonth = State(initialValue: bsNow.month)
         _today = State(initialValue: bsNow)
-        _selectedDate = State(initialValue: bsNow) // default to today
+        _selectedDate = State(initialValue: nil) // Default to no explicit selection
+        
+        let initialMode = CalendarViewMode.loadDefault()
+        _viewMode = State(initialValue: initialMode)
+        _previousMode = State(initialValue: initialMode)
     }
 
     
     var body: some View {
-        VStack(spacing: 15) {
-            // Header
+        VStack(spacing: 8) {
+            // Main Content
             switch viewMode {
-                case .dateConversion:
-                    DateConversionView(adDate: $adDate, bsDate: $bsDate)
                 case .calendar:
-                    CalendarView(displayYear: $displayYear, displayMonth: $displayMonth, selectedDate: $selectedDate, today: $today, adDate: $adDate, bsDate: $bsDate)
-                case .somethingElse:
-                    TodayView(currentDate: dateUpdater.currentDate)
-            }
-            
-            Divider()
-            
-            HStack {
-                // Quit icon button
-                Button {
-                    NSApplication.shared.terminate(nil)
-                } label: {
-                    Image(systemName: "power")
-                        .foregroundStyle(Color(.red.opacity(0.6)))
-                        .font(.system(size: 13, weight: .semibold))
-                        .frame(width: 24, height: 24)
-                        .background(.quaternary, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .help("Quit App")
-                
-                Spacer()
-                
-                // Only two options shown: the "other" modes, icon-only
-                HStack(spacing: 8) {
-                    ForEach(otherModes(for: viewMode), id: \.self) { mode in
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                viewMode = mode
-                            }
-                        } label: {
-                            Image(systemName: icon(for: mode))
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 34, height: 28)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 8)
-                                .background(Color.secondary.opacity(0.15), in: Capsule())
+                    CalendarView(displayYear: $displayYear, displayMonth: $displayMonth, selectedDate: $selectedDate, today: $today, adDate: $adDate, bsDate: $bsDate, viewMode: $viewMode)
+                case .today:
+                    TodayView(currentDate: dateUpdater.currentDate, viewMode: $viewMode)
+                case .settings:
+                    SettingsView(onBack: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            // Apply the preference picked in settings
+                            viewMode = primaryMode
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(title(for: mode))
-                        .help(title(for: mode))
-                    }
-                }
+                    })
             }
         }
-        .padding()
-        .frame(width: 380)
+        .padding(.top, 8)
+        .padding(.horizontal)
+        .padding(.bottom, 12)
+        .frame(width: 380, height: 480)
         .onAppear {
             // Ensure both AD and BS are synced to "today" when the menu opens
             adDate = dateUpdater.currentDate
             if let bsToday = NepaliCalendar.shared.convertToBSDate(from: dateUpdater.currentDate) {
                 bsDate = bsToday
                 today = bsToday
-                // keep calendar pointed at today on first open
-                displayMonth = bsToday.month
-                displayYear = bsToday.year
-                selectedDate = bsToday
             }
         }
         .onReceive(dateUpdater.$currentDate) { newDate in
-            // Always keep AD and BS dates synced to today's date
             adDate = newDate
             if let bsToday = NepaliCalendar.shared.convertToBSDate(from: newDate) {
                 let wasShowingToday = (today?.month == displayMonth && today?.year == displayYear)
-                
                 self.today = bsToday
                 self.bsDate = bsToday
-    
                 if wasShowingToday {
                     displayMonth = bsToday.month
                     displayYear = bsToday.year
@@ -411,7 +383,6 @@ struct VCenterView: View {
         var y = displayYear
         if m < 1 { m = 12; y -= 1 }
         else if m > 12 { m = 1; y += 1 }
-        // Prevent navigation beyond 2060-2085 range
         guard y >= 2060 && y <= 2085 else { return }
         if NepaliCalendar.shared.daysInMonth(year: y, month: m) > 0 {
             displayMonth = m; displayYear = y
@@ -421,35 +392,23 @@ struct VCenterView: View {
             } else if let today = today, today.year == y, today.month == m {
                 selectedDate = today
             } else {
-                selectedDate = BSDate(year: y, month: m, day: 1)
+                selectedDate = nil
             }
         }
     }
     
     private func otherModes(for current: CalendarViewMode) -> [CalendarViewMode] {
-        switch current {
-        case .calendar:
-            return [.somethingElse, .dateConversion] // Today, Converter
-        case .dateConversion:
-            return [.somethingElse, .calendar] // Today, Calendar
-        case .somethingElse:
-            return [.calendar, .dateConversion] // Calendar, Converter
-        }
-    }
-    
-    private func title(for mode: CalendarViewMode) -> String {
-        switch mode {
-        case .calendar: return "Calendar"
-        case .dateConversion: return "Converter"
-        case .somethingElse: return "Today"
-        }
-    }
-    
-    private func icon(for mode: CalendarViewMode) -> String {
-        switch mode {
-        case .calendar: return "calendar"
-        case .dateConversion: return "arrow.2.squarepath"
-        case .somethingElse: return "sun.max"
+        // We only show functional modes in the footer (Today, Calendar).
+        // Settings is now a standalone button on the left.
+        
+        let primary = primaryMode
+        
+        if current == primary {
+            // If in primary mode (Today or Calendar), show the other one
+            return primary == .today ? [.calendar] : [.today]
+        } else {
+            // In settings or other, show the primary
+            return [primary]
         }
     }
 }

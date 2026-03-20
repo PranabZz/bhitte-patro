@@ -10,6 +10,7 @@ import SwiftUI
 struct TodayView: View {
     // The current AD date to compute today's BS date
     var currentDate: Date
+    @Binding var viewMode: CalendarViewMode
 
     // Optional title (defaults to "आज")
     var title: String = "आज"
@@ -38,9 +39,28 @@ struct TodayView: View {
 
     var body: some View {
         VStack {
-            Text(title)
-                .font(.title2)
-                .bold()
+            HStack {
+                Spacer()
+                Text(title)
+                    .font(.title2)
+                    .bold()
+                Spacer()
+                
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewMode = .settings
+                    }
+                } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 32, height: 32)
+                        .background(Color.secondary.opacity(0.15), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .help("Settings")
+            }
+            .padding(.horizontal)
 
             Spacer()
 
@@ -65,6 +85,8 @@ struct TodayView: View {
                         .foregroundColor(.secondary)
                 }
             }
+            
+            Spacer()
         }
     }
 }

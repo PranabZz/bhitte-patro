@@ -9,6 +9,7 @@ import SwiftUI
 struct DateConversionView: View {
     @Binding var adDate: Date
     @Binding var bsDate: BSDate
+    @Binding var viewMode: CalendarViewMode
 
     @State private var dayText: String = ""
     @State private var monthText: String = ""
@@ -18,6 +19,27 @@ struct DateConversionView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                Text("Converter")
+                    .font(.title3)
+                    .bold()
+                Spacer()
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewMode = .settings
+                    }
+                } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 32, height: 32)
+                        .background(Color.secondary.opacity(0.15), in: Circle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 10)
 
             
             // ── BS Date (Hero) ───────────────────────────────────────────
