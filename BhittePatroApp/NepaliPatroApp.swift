@@ -145,12 +145,12 @@ class NepaliCalendar {
         anchorComps.month = 4
         anchorComps.day = 14
         guard let anchorADDate = calendar.date(from: anchorComps) else { return nil }
-        
+
         // Anchor BS date components
         var year = anchorYear       // e.g., 2060
         var month = anchorMonth     // e.g., 1
-        var day = anchorDay         // e.g., 1
-        
+        let day = anchorDay         // e.g., 1
+
         // Calculate number of days from anchor BS date to target BS date
         var totalDays = 0
         
@@ -252,7 +252,7 @@ enum CalendarViewMode: String, CaseIterable {
 
 // MARK: - App
 @main
-struct NepaliPatroApp: App {
+struct BhittePatroApp: App {
     @StateObject private var dateUpdater = DateUpdater()
 
     var body: some Scene {
@@ -335,7 +335,7 @@ struct VCenterView: View {
 
     
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 0) {
             // Main Content
             switch viewMode {
                 case .calendar:
@@ -345,33 +345,29 @@ struct VCenterView: View {
                 case .settings:
                     SettingsView(onBack: {
                         withAnimation(.easeInOut(duration: 0.2)) {
-                            // Apply the preference picked in settings
                             viewMode = primaryMode
                         }
                     })
             }
         }
-        .padding(.top, 8)
-        .padding(.horizontal)
-        .padding(.bottom, 12)
-        .frame(width: 380, height: 480)
+        .frame(width: viewMode == .today ? 300 : 380, height: viewMode == .today ? 320 : 480)
+        .animation(.easeInOut(duration: 0.2), value: viewMode)
         .onAppear {
-            // Ensure both AD and BS are synced to "today" when the menu opens
             adDate = dateUpdater.currentDate
             if let bsToday = NepaliCalendar.shared.convertToBSDate(from: dateUpdater.currentDate) {
                 bsDate = bsToday
                 today = bsToday
+                if selectedDate == nil {
+                    selectedDate = bsToday
+                }
             }
         }
         .onReceive(dateUpdater.$currentDate) { newDate in
             adDate = newDate
             if let bsToday = NepaliCalendar.shared.convertToBSDate(from: newDate) {
-                let wasShowingToday = (today?.month == displayMonth && today?.year == displayYear)
                 self.today = bsToday
                 self.bsDate = bsToday
-                if wasShowingToday {
-                    displayMonth = bsToday.month
-                    displayYear = bsToday.year
+                if selectedDate?.day == today?.day && selectedDate?.month == today?.month && selectedDate?.year == today?.year {
                     selectedDate = bsToday
                 }
             }
