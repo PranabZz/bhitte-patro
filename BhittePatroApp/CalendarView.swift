@@ -15,6 +15,7 @@ struct CalendarView: View {
     @Binding var adDate: Date
     @Binding var bsDate: BSDate
     @Binding var viewMode: CalendarViewMode
+    @ObservedObject var nepaliCalendar = NepaliCalendar.shared
 
     private let rowSpacing: CGFloat = 2
     private let cellCornerRadius: CGFloat = 6
@@ -30,8 +31,9 @@ struct CalendarView: View {
             weekdaySection
                 .frame(height: 32)
 
-            // Calendar grid - always 6 rows
+            // Calendar grid with directional slide animation
             calendarGridSection
+                .animation(.linear(duration: 0.3), value: displayMonth)
 
             // Selected date info
             selectedDateSection
@@ -70,7 +72,7 @@ struct CalendarView: View {
                     HStack {
                         Spacer()
                         Text(NepaliCalendar.shared.months[displayMonth - 1])
-                            .font(.system(sfrize: 16, weight: .bold))
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.primary)
                         Spacer()
                     }
@@ -130,12 +132,8 @@ struct CalendarView: View {
                     .buttonStyle(.plain)
                 }
 
-                // Settings button
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        viewMode = .settings
-                    }
-                } label: {
+                // Settings button -> use SettingsLink to open Settings scene
+                SettingsLink {
                     Image(systemName: "gearshape")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.secondary)
@@ -182,13 +180,14 @@ struct CalendarView: View {
                         index: index,
                         cellSize: cellSize,
                         cellHeight: cellHeight,
-                        selectedDate: selectedDate
+                        selectedDate: selectedDate,
+                        displayYear: displayYear,
+                        displayMonth: displayMonth
                     )
                     .contentShape(Rectangle())
                     .onTapGesture {
                         handleCellTap(cell: cell)
                     }
-                    .transition(.opacity)
                 }
             }
             .frame(height: CGFloat(numberOfRows) * cellHeight + CGFloat(numberOfRows - 1) * rowSpacing)
@@ -261,10 +260,12 @@ struct CalendarView: View {
         else if m > 12 { m = 1; y += 1 }
         guard y >= 2060 && y <= 2085 else { return }
         if NepaliCalendar.shared.daysInMonth(year: y, month: m) > 0 {
-            displayMonth = m
-            displayYear = y
-            if selectedDate == nil {
-                selectedDate = today
+            withAnimation(.easeInOut(duration: 0.18)) {
+                displayMonth = m
+                displayYear = y
+                if selectedDate == nil {
+                    selectedDate = today
+                }
             }
         }
     }
@@ -335,6 +336,10 @@ fileprivate struct CalendarCellView: View {
     let cellSize: CGFloat
     let cellHeight: CGFloat
     let selectedDate: BSDate?
+    let displayYear: Int
+    let displayMonth: Int
+    
+    @State private var isCurrentMonth = false
 
     private let cellCornerRadius: CGFloat = 6
 
@@ -355,6 +360,8 @@ fileprivate struct CalendarCellView: View {
                 return ""
             }
         }()
+        
+        let animationDelay = Double(index) * 0.003
 
         ZStack {
             // Background - only today gets highlighted
@@ -375,9 +382,10 @@ fileprivate struct CalendarCellView: View {
                     .font(.system(size: 18, weight: cell.isToday ? .semibold : .regular, design: .rounded))
                     .foregroundStyle(
                         cell.isToday ? Color.white :
-                        isSelected ? Color.secondary :
-                        (cell.isCurrent && (index % 7 == 6 || cell.isHoliday)) ? Color.red :
-                        (cell.isCurrent ? Color.primary : Color.secondary.opacity(0.3))
+                        (cell.isCurrent && cell.isHoliday) ? Color.red :
+                        (cell.isCurrent && index % 7 == 6) ? Color.red :
+                        (isSelected ? Color.secondary :
+                        (cell.isCurrent ? Color.primary : Color.gray.opacity(0.5)))
                     )
 
                 Spacer(minLength: 0)
@@ -391,7 +399,7 @@ fileprivate struct CalendarCellView: View {
                             .foregroundStyle(
                                 cell.isToday ? Color.white.opacity(0.9) :
                                 isSelected ? Color.secondary :
-                                (cell.isCurrent ? Color.secondary : Color.secondary.opacity(0.2))
+                                (cell.isCurrent ? Color.secondary : Color.gray.opacity(0.4))
                             )
                             .padding(.trailing, 3)
                             .padding(.bottom, 2)
@@ -400,5 +408,35 @@ fileprivate struct CalendarCellView: View {
             }
         }
         .frame(width: cellSize, height: cellHeight)
+        .opacity(cell.isCurrent ? (isCurrentMonth ? 1 : 0.5) : 0.6)
+        .scaleEffect(cell.isCurrent ? (isCurrentMonth ? 1 : 0.85) : 1)
+        .animation(.easeOut(duration: 0.25).delay(animationDelay), value: isCurrentMonth)
+        .onChange(of: displayYear) { _, _ in
+            if cell.isCurrent {
+                withAnimation {
+                    isCurrentMonth = false
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    withAnimation {
+                        isCurrentMonth = (cell.bsYear == displayYear && cell.bsMonth == displayMonth)
+                    }
+                }
+            }
+        }
+        .onChange(of: displayMonth) { _, _ in
+            if cell.isCurrent {
+                withAnimation {
+                    isCurrentMonth = false
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    withAnimation {
+                        isCurrentMonth = (cell.bsYear == displayYear && cell.bsMonth == displayMonth)
+                    }
+                }
+            }
+        }
+        .onAppear {
+            isCurrentMonth = (cell.bsYear == displayYear && cell.bsMonth == displayMonth)
+        }
     }
 }

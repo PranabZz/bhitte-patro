@@ -10,6 +10,7 @@ import SwiftUI
 struct TodayView: View {
     var currentDate: Date
     @Binding var viewMode: CalendarViewMode
+    @ObservedObject var nepaliCalendar = NepaliCalendar.shared
 
     private var todayBS: BSDate {
         NepaliCalendar.shared.convertToBSDate(from: currentDate) ?? BSDate(year: 2081, month: 1, day: 1)
@@ -80,26 +81,25 @@ struct TodayView: View {
 
     // MARK: - Header Section
     private var headerSection: some View {
-        HStack {
-            Spacer()
-
+        ZStack {
             Text("आज")
-                .font(.system(size: 16, weight: .bold))
-
-            Spacer()
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    viewMode = .settings
+                .font(.system(size: 24, weight: .bold))
+                .multilineTextAlignment(.center)
+            
+            HStack {
+                Spacer()
+                
+                // Settings button -> use SettingsLink to open Settings scene
+                SettingsLink {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
+                        .background(Color.secondary.opacity(0.15), in: Circle())
                 }
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 28, height: 28)
-                    .background(Color.secondary.opacity(0.15), in: Circle())
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
+        .frame(maxWidth: .infinity)
     }
 }

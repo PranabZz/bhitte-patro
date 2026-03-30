@@ -26,9 +26,8 @@ struct DateConversionView: View {
                     .bold()
                 Spacer()
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        viewMode = .settings
-                    }
+                    // Open the standalone Settings window instead of inline settings
+                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
                 } label: {
                     Image(systemName: "gearshape")
                         .font(.system(size: 14, weight: .semibold))
@@ -41,7 +40,6 @@ struct DateConversionView: View {
             .padding(.horizontal)
             .padding(.bottom, 10)
 
-            
             // ── BS Date (Hero) ───────────────────────────────────────────
             VStack(spacing: 4) {
                 Text(NepaliCalendar.shared.months[bsDate.month - 1])

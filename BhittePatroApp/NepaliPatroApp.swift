@@ -26,8 +26,10 @@ struct CalendarData: Codable {
 
 
 
-class NepaliCalendar {
+class NepaliCalendar: ObservableObject {
     static let shared = NepaliCalendar()
+    
+    @Published var dataUpdated = UUID()
     
     let nepaliNumbers = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"]
     let weekDays = ["आइत", "सोम", "मंगल", "बुध", "बिही", "शुक्र", "शनि"]
@@ -49,17 +51,28 @@ class NepaliCalendar {
         loadCalendarData()
     }
     
-    private func loadCalendarData() {
-        guard let url = Bundle.main.url(forResource: "calendar", withExtension: "json") ??
-                        Bundle.main.url(forResource: "calendar", withExtension: "json", subdirectory: "data") else {
-            print("Failed to find calendar.json in bundle")
-            return
+    func loadCalendarData() {
+        var data: Data? = CalendarManager.shared.getLocalCalendarData()
+        
+        if data == nil {
+            guard let url = Bundle.main.url(forResource: "calendar", withExtension: "json") ??
+                            Bundle.main.url(forResource: "calendar", withExtension: "json", subdirectory: "data") else {
+                print("Failed to find calendar.json in bundle")
+                return
+            }
+            data = try? Data(contentsOf: url)
         }
         
+        guard let data = data else { return }
+        
         do {
-            let data = try Data(contentsOf: url)
             let decodedData = try JSONDecoder().decode(CalendarData.self, from: data)
             
+            // Reset existing data
+            self.monthDaysData = [:]
+            self.holidays = [:]
+            self.tithi = [:]
+
             // Convert monthDaysData
             for (yearStr, days) in decodedData.monthDaysData {
                 if let year = Int(yearStr) {
@@ -95,6 +108,10 @@ class NepaliCalendar {
                     }
                     self.tithi[year] = yearTithi
                 }
+            }
+            
+            DispatchQueue.main.async {
+                self.dataUpdated = UUID()
             }
         } catch {
             print("Error loading/decoding calendar.json: \(error)")
@@ -256,9 +273,13 @@ struct BhittePatroApp: App {
     @StateObject private var dateUpdater = DateUpdater()
 
     var body: some Scene {
+        // Menu bar extra remains your primary UI
         MenuBarExtra {
             VCenterView()
                 .environmentObject(dateUpdater)
+                .onAppear {
+                    CalendarManager.shared.checkAndAutoUpdate()
+                }
         } label: {
             HStack {
                 Image(systemName: "calendar")
@@ -268,6 +289,25 @@ struct BhittePatroApp: App {
             }
         }
         .menuBarExtraStyle(.window)
+
+        // Add a standard Settings window (Cmd-,)
+        Settings {
+            SettingsView(onBack: {
+                // When used as a standalone Settings window, just close the window on back
+                NSApp.keyWindow?.close()
+            })
+            .frame(width: 480, height: 560)
+        }
+
+        // Optional: include default app commands so “Preferences…” appears in the app menu
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") {
+                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+        }
     }
 }
 
@@ -306,6 +346,7 @@ struct DateStepperRow: View {
 struct VCenterView: View {
     
     @EnvironmentObject var dateUpdater: DateUpdater
+    @ObservedObject var nepaliCalendar = NepaliCalendar.shared
     @AppStorage("DefaultCalendarViewMode") private var defaultMode: String = "calendar"
     
     @State private var displayYear: Int
@@ -350,8 +391,15 @@ struct VCenterView: View {
                     })
             }
         }
-        .frame(width: viewMode == .today ? 300 : 380, height: viewMode == .today ? 320 : 480)
+        .frame(width: viewMode == .today ? 220 : 340, height: viewMode == .today ? 220 : 470)
         .animation(.easeInOut(duration: 0.2), value: viewMode)
+        .onChange(of: defaultMode) { _, newValue in
+            if let newMode = CalendarViewMode(rawValue: newValue) {
+                withAnimation {
+                    viewMode = newMode
+                }
+            }
+        }
         .onAppear {
             adDate = dateUpdater.currentDate
             if let bsToday = NepaliCalendar.shared.convertToBSDate(from: dateUpdater.currentDate) {
@@ -363,12 +411,18 @@ struct VCenterView: View {
             }
         }
         .onReceive(dateUpdater.$currentDate) { newDate in
+            let oldToday = self.today
             adDate = newDate
-            if let bsToday = NepaliCalendar.shared.convertToBSDate(from: newDate) {
-                self.today = bsToday
-                self.bsDate = bsToday
-                if selectedDate?.day == today?.day && selectedDate?.month == today?.month && selectedDate?.year == today?.year {
-                    selectedDate = bsToday
+            if let newBsToday = NepaliCalendar.shared.convertToBSDate(from: newDate) {
+                // Update today and bsDate first
+                self.today = newBsToday
+                self.bsDate = newBsToday
+
+                // If selection was nil, or was equal to the previous "today", or equals the new today, set selection to new today
+                if selectedDate == nil ||
+                   (oldToday != nil && selectedDate?.year == oldToday?.year && selectedDate?.month == oldToday?.month && selectedDate?.day == oldToday?.day) ||
+                   (selectedDate?.year == newBsToday.year && selectedDate?.month == newBsToday.month && selectedDate?.day == newBsToday.day) {
+                    selectedDate = newBsToday
                 }
             }
         }

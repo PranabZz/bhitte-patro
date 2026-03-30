@@ -6,86 +6,112 @@
 //
 
 import SwiftUI
+import Foundation
+
+extension Notification.Name {
+    static let didChangeDefaultViewMode = Notification.Name("didChangeDefaultViewMode")
+}
 
 struct SettingsView: View {
     @AppStorage("DefaultCalendarViewMode") private var defaultMode: String = "calendar"
     @State private var launchManager = LaunchAtLoginManager.shared
+    @ObservedObject var calendarManager = CalendarManager.shared
 
     var onBack: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            headerSection
-                .frame(height: 48)
 
-            // Divider
-            Divider()
 
             // Content
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 16) {
                     // Launch at Login section
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Launch at Login")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold))
 
                         Toggle("Open app when you log in to your Mac", isOn: Bindable(launchManager).isEnabled)
                             .toggleStyle(.switch)
-                            .font(.system(size: 11))
+                            .font(.system(size: 12))
                     }
-                    .padding(10)
-                    .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
+                    .padding(12)
+                    .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
 
                     // Default view section
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Default View")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold))
 
                         Picker("Default View", selection: $defaultMode) {
                             Text("Today").tag("today")
                             Text("Calendar").tag("calendar")
                         }
                         .pickerStyle(.segmented)
-                        .font(.system(size: 11))
-                    }
-                    .padding(10)
-                    .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
-
-                    // App info section
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text("Version")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Text("1.0.0")
-                                .font(.system(size: 11, weight: .medium))
-                        }
-
-                        HStack {
-                            Text("Last updated")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Text("Today")
-                                .font(.system(size: 11, weight: .medium))
+                        .onChange(of: defaultMode) { _, new in
+                            // Notify the app to switch immediately
+                            NotificationCenter.default.post(
+                                name: .didChangeDefaultViewMode,
+                                object: nil,
+                                userInfo: ["mode": new]
+                            )
                         }
                     }
-                    .padding(10)
-                    .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
+                    .padding(12)
+                    .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
 
-                    // Help section
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Help & Support")
-                            .font(.system(size: 12, weight: .semibold))
+                    // Calendar Update section
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Calendar Data")
+                            .font(.system(size: 13, weight: .semibold))
 
-                        Text("No link for now")
-                            .font(.system(size: 11, weight: .regular))
-                            .foregroundStyle(Color.secondary.opacity(0.5))
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Last updated")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                                
+                                if let last = calendarManager.lastUpdated {
+                                    Text(last, style: .date)
+                                        .font(.system(size: 11, weight: .medium))
+                                    Text(last, style: .time)
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Text("Never")
+                                        .font(.system(size: 11, weight: .medium))
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            Button {
+                                Task {
+                                    await calendarManager.fetchLatestCalendar()
+                                }
+                            } label: {
+                                if calendarManager.isUpdating {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Text("Update Now")
+                                        .font(.system(size: 11, weight: .medium))
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(calendarManager.isUpdating)
+                        }
+
+                        if let error = calendarManager.updateError {
+                            Text(error)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.red)
+                        }
                     }
-                    .padding(10)
-                    .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
+                    .padding(12)
+                    .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+
+                    Spacer(minLength: 20)
 
                     // Quit button
                     Button {
@@ -95,15 +121,15 @@ struct SettingsView: View {
                             Image(systemName: "power")
                             Text("Quit Bhitte Patro")
                         }
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(Color.red, in: RoundedRectangle(cornerRadius: 6))
+                        .padding(.vertical, 10)
+                        .background(Color.red, in: RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(12)
+                .padding(16)
             }
         }
         .padding(12)
