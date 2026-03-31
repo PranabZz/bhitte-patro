@@ -357,6 +357,7 @@ struct VCenterView: View {
     @State private var bsDate = NepaliCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
     @State private var viewMode: CalendarViewMode
     @State private var previousMode: CalendarViewMode = .calendar
+    @State private var selectionTimer: Timer? = nil
 
     private var primaryMode: CalendarViewMode {
         CalendarViewMode(rawValue: defaultMode) ?? .calendar
@@ -400,6 +401,20 @@ struct VCenterView: View {
                 }
             }
         }
+        .onChange(of: selectedDate) { _, newValue in
+            selectionTimer?.invalidate()
+            selectionTimer = nil
+            
+            if let selected = newValue, let t = today, selected != t {
+                selectionTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: false) { _ in
+                    withAnimation {
+                        selectedDate = t
+                        displayYear = t.year
+                        displayMonth = t.month
+                    }
+                }
+            }
+        }
         .onAppear {
             adDate = dateUpdater.currentDate
             if let bsToday = NepaliCalendar.shared.convertToBSDate(from: dateUpdater.currentDate) {
@@ -425,6 +440,10 @@ struct VCenterView: View {
                     selectedDate = newBsToday
                 }
             }
+        }
+        .onDisappear {
+            selectionTimer?.invalidate()
+            selectionTimer = nil
         }
     }
 
