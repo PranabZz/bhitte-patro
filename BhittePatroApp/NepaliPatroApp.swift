@@ -95,19 +95,14 @@ class NepaliCalendar: ObservableObject {
     }
     
     func loadCalendarData() {
-        var data: Data? = CalendarManager.shared.getLocalCalendarData()
-        
-        if data == nil {
-            guard let url = Bundle.main.url(forResource: "calendar", withExtension: "json") ??
-                            Bundle.main.url(forResource: "calendar", withExtension: "json", subdirectory: "data") else {
-                print("Failed to find calendar.json in bundle")
-                return
-            }
-            data = try? Data(contentsOf: url)
+        guard let url = Bundle.main.url(forResource: "calendar", withExtension: "json") ??
+                        Bundle.main.url(forResource: "calendar", withExtension: "json", subdirectory: "data") else {
+            print("Failed to find calendar.json in bundle")
+            return
         }
-        
-        guard let data = data else { return }
-        
+
+        guard let data = try? Data(contentsOf: url) else { return }
+
         do {
             let decodedData = try JSONDecoder().decode(CalendarData.self, from: data)
             
@@ -325,9 +320,6 @@ struct BhittePatroApp: App {
         MenuBarExtra {
             VCenterView()
                 .environmentObject(dateUpdater)
-                .onAppear {
-                    CalendarManager.shared.checkAndAutoUpdate()
-                }
         } label: {
             HStack {
                 Image(systemName: "calendar")

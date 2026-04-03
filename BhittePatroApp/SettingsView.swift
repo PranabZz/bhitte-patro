@@ -15,7 +15,6 @@ extension Notification.Name {
 struct SettingsView: View {
     @AppStorage("DefaultCalendarViewMode") private var defaultMode: String = "calendar"
     @State private var launchManager = LaunchAtLoginManager.shared
-    @ObservedObject var calendarManager = CalendarManager.shared
 
     var onBack: () -> Void
 
@@ -23,9 +22,9 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             // Header
             headerSection
-            
+
             Divider()
-            
+
             // Content
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -33,7 +32,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Launch at Login")
                             .font(.system(size: 12, weight: .semibold))
-                        
+
                         HStack {
                             Text("Open app when you log in to your Mac")
                                 .font(.system(size: 12))
@@ -45,12 +44,12 @@ struct SettingsView: View {
                     }
                     .padding(12)
                     .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-                    
+
                     // Default view section
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Default View")
                             .font(.system(size: 12, weight: .semibold))
-                        
+
                         HStack {
                             Text("Default View")
                                 .font(.system(size: 12))
@@ -73,60 +72,7 @@ struct SettingsView: View {
                     }
                     .padding(12)
                     .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-                    
-                    // Calendar Update section
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Calendar Data")
-                            .font(.system(size: 12, weight: .semibold))
-                        
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Last updated")
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(.secondary)
-                                    
-                                    if let last = calendarManager.lastUpdated {
-                                        Text(last, style: .date)
-                                            .font(.system(size: 12, weight: .medium))
-                                        Text(last, style: .time)
-                                            .font(.system(size: 11))
-                                            .foregroundStyle(.secondary)
-                                    } else {
-                                        Text("Never")
-                                            .font(.system(size: 12, weight: .medium))
-                                    }
-                                }
-                                
-                                Spacer()
-                                
-                                Button {
-                                    Task {
-                                        await calendarManager.fetchLatestCalendar()
-                                    }
-                                } label: {
-                                    if calendarManager.isUpdating {
-                                        ProgressView()
-                                            .controlSize(.small)
-                                    } else {
-                                        Text("Update Now")
-                                            .font(.system(size: 11, weight: .medium))
-                                    }
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(calendarManager.isUpdating)
-                            }
-                            
-                            if let error = calendarManager.updateError {
-                                Text(error)
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(.red)
-                            }
-                        }
-                    }
-                    .padding(12)
-                    .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-                    
+
                     // Quit button
                     Button {
                         NSApplication.shared.terminate(nil)
