@@ -88,8 +88,14 @@ struct TodayView: View {
             HStack {
                 Spacer()
                 
-                // Settings button -> use SettingsLink to open Settings scene
-                SettingsLink {
+                // Settings button -> switch to settings view
+                Button {
+                    NotificationCenter.default.post(
+                        name: .didChangeDefaultViewMode,
+                        object: nil,
+                        userInfo: ["mode": "settings"]
+                    )
+                } label: {
                     Image(systemName: "gearshape")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.secondary)

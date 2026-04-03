@@ -137,8 +137,14 @@ struct CalendarView: View {
                     .buttonStyle(.plain)
                 }
 
-                // Settings button -> use SettingsLink to open Settings scene
-                SettingsLink {
+                // Settings button -> switch to settings view
+                Button {
+                    NotificationCenter.default.post(
+                        name: .didChangeDefaultViewMode,
+                        object: nil,
+                        userInfo: ["mode": "settings"]
+                    )
+                } label: {
                     Image(systemName: "gearshape")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.secondary)

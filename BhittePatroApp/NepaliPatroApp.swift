@@ -338,20 +338,15 @@ struct BhittePatroApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        // Add a standard Settings window (Cmd-,)
-        Settings {
-            SettingsView(onBack: {
-                // When used as a standalone Settings window, just close the window on back
-                NSApp.keyWindow?.close()
-            })
-            .frame(width: 480, height: 560)
-        }
-
-        // Optional: include default app commands so “Preferences…” appears in the app menu
+        // Settings command for menu bar (opens inline settings in the menu bar window)
         .commands {
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
-                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                    NotificationCenter.default.post(
+                        name: .didChangeDefaultViewMode,
+                        object: nil,
+                        userInfo: ["mode": "settings"]
+                    )
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }
@@ -439,10 +434,17 @@ struct VCenterView: View {
                     })
             }
         }
-        .frame(width: viewMode == .today ? 220 : 340, height: viewMode == .today ? 220 : 470)
+        .frame(width: viewMode == .today ? 220 : viewMode == .settings ? 400 : 340, height: viewMode == .today ? 220 : viewMode == .settings ? 520 : 470)
         .animation(.easeInOut(duration: 0.2), value: viewMode)
+        .onReceive(NotificationCenter.default.publisher(for: .didChangeDefaultViewMode)) { notification in
+            if let mode = notification.userInfo?["mode"] as? String {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    viewMode = .settings
+                }
+            }
+        }
         .onChange(of: defaultMode) { _, newValue in
-            if let newMode = CalendarViewMode(rawValue: newValue) {
+            if let newMode = CalendarViewMode(rawValue: newValue), newMode != .settings {
                 withAnimation {
                     viewMode = newMode
                 }

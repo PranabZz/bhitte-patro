@@ -21,98 +21,112 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-
-
+            // Header
+            headerSection
+            
+            Divider()
+            
             // Content
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     // Launch at Login section
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Launch at Login")
-                            .font(.system(size: 13, weight: .semibold))
-
-                        Toggle("Open app when you log in to your Mac", isOn: Bindable(launchManager).isEnabled)
-                            .toggleStyle(.switch)
-                            .font(.system(size: 12))
+                            .font(.system(size: 12, weight: .semibold))
+                        
+                        HStack {
+                            Text("Open app when you log in to your Mac")
+                                .font(.system(size: 12))
+                            Spacer()
+                            Toggle("", isOn: Bindable(launchManager).isEnabled)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
                     }
                     .padding(12)
-                    .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
-
+                    .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                    
                     // Default view section
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Default View")
-                            .font(.system(size: 13, weight: .semibold))
-
-                        Picker("Default View", selection: $defaultMode) {
-                            Text("Today").tag("today")
-                            Text("Calendar").tag("calendar")
-                        }
-                        .pickerStyle(.segmented)
-                        .onChange(of: defaultMode) { _, new in
-                            // Notify the app to switch immediately
-                            NotificationCenter.default.post(
-                                name: .didChangeDefaultViewMode,
-                                object: nil,
-                                userInfo: ["mode": new]
-                            )
-                        }
-                    }
-                    .padding(12)
-                    .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
-
-                    // Calendar Update section
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Calendar Data")
-                            .font(.system(size: 13, weight: .semibold))
-
+                            .font(.system(size: 12, weight: .semibold))
+                        
                         HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Last updated")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
-                                
-                                if let last = calendarManager.lastUpdated {
-                                    Text(last, style: .date)
-                                        .font(.system(size: 11, weight: .medium))
-                                    Text(last, style: .time)
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.secondary)
-                                } else {
-                                    Text("Never")
-                                        .font(.system(size: 11, weight: .medium))
-                                }
-                            }
-                            
+                            Text("Default View")
+                                .font(.system(size: 12))
                             Spacer()
-                            
-                            Button {
-                                Task {
-                                    await calendarManager.fetchLatestCalendar()
-                                }
-                            } label: {
-                                if calendarManager.isUpdating {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                } else {
-                                    Text("Update Now")
-                                        .font(.system(size: 11, weight: .medium))
-                                }
+                            Picker("", selection: $defaultMode) {
+                                Text("Today").tag("today")
+                                Text("Calendar").tag("calendar")
                             }
-                            .buttonStyle(.bordered)
-                            .disabled(calendarManager.isUpdating)
-                        }
-
-                        if let error = calendarManager.updateError {
-                            Text(error)
-                                .font(.system(size: 10))
-                                .foregroundStyle(.red)
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                            .frame(width: 180)
+                            .onChange(of: defaultMode) { _, new in
+                                NotificationCenter.default.post(
+                                    name: .didChangeDefaultViewMode,
+                                    object: nil,
+                                    userInfo: ["mode": new]
+                                )
+                            }
                         }
                     }
                     .padding(12)
-                    .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
-
-                    Spacer(minLength: 20)
-
+                    .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                    
+                    // Calendar Update section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Calendar Data")
+                            .font(.system(size: 12, weight: .semibold))
+                        
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Last updated")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.secondary)
+                                    
+                                    if let last = calendarManager.lastUpdated {
+                                        Text(last, style: .date)
+                                            .font(.system(size: 12, weight: .medium))
+                                        Text(last, style: .time)
+                                            .font(.system(size: 11))
+                                            .foregroundStyle(.secondary)
+                                    } else {
+                                        Text("Never")
+                                            .font(.system(size: 12, weight: .medium))
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                Button {
+                                    Task {
+                                        await calendarManager.fetchLatestCalendar()
+                                    }
+                                } label: {
+                                    if calendarManager.isUpdating {
+                                        ProgressView()
+                                            .controlSize(.small)
+                                    } else {
+                                        Text("Update Now")
+                                            .font(.system(size: 11, weight: .medium))
+                                    }
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(calendarManager.isUpdating)
+                            }
+                            
+                            if let error = calendarManager.updateError {
+                                Text(error)
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                    }
+                    .padding(12)
+                    .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                    
                     // Quit button
                     Button {
                         NSApplication.shared.terminate(nil)
@@ -121,7 +135,7 @@ struct SettingsView: View {
                             Image(systemName: "power")
                             Text("Quit Bhitte Patro")
                         }
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
@@ -132,30 +146,26 @@ struct SettingsView: View {
                 .padding(16)
             }
         }
-        .padding(12)
     }
 
     // MARK: - Header Section
     private var headerSection: some View {
-        HStack {
+        HStack(spacing: 12) {
             Button(action: onBack) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 32, height: 32)
-                    .background(Color.secondary.opacity(0.15), in: Circle())
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 34, height: 34)
+                    .background(Color.secondary.opacity(0.12), in: Circle())
             }
             .buttonStyle(.plain)
 
-            Spacer()
-
             Text("Settings")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
 
             Spacer()
-
-            // Invisible placeholder to keep title centered
-            Color.clear.frame(width: 32, height: 1)
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
