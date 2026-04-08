@@ -89,10 +89,10 @@ struct CalendarView: View {
                 HStack(spacing: 4) {
                     Button(action: { navigate(-1) }) {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.red)
-                            .frame(width: 40, height: 32)
-                            .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .frame(width: 34, height: 28)
+                            .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -160,10 +160,10 @@ struct CalendarView: View {
 
                     Button(action: { navigate(1) }) {
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.red)
-                            .frame(width: 40, height: 32)
-                            .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .frame(width: 34, height: 28)
+                            .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -180,15 +180,24 @@ struct CalendarView: View {
                                 selectedDate = today
                             }
                         } label: {
-                            Image(systemName: "sun.max.fill")
+                            // Prefer a clearer "today" icon. Options: calendar.badge.clock, target, scope
+                            // Using calendar.badge.clock for clarity. If you prefer text, see comment below.
+                            Image(systemName: "calendar.badge.clock")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(.red)
-                                .frame(width: 28, height: 28)
+                                .frame(width: 26, height: 26)
                         }
                         .background(Color.red.opacity(0.12), in: Capsule())
                         .buttonStyle(.plain)
+
+                        // If you prefer text instead of icon, replace the label above with:
+                        // Text("आज")
+                        //     .font(.system(size: 12, weight: .semibold))
+                        //     .foregroundStyle(.red)
+                        //     .frame(height: 26)
+                        //     .padding(.horizontal, 8)
                     } else {
-                        Color.clear.frame(width: 28, height: 28)
+                        Color.clear.frame(width: 26, height: 26)
                     }
 
                     Spacer()
