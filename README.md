@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Bhitte Patro</strong> is a lightweight Nepali calendar menu bar application for macOS. It provides quick access to the current Bikram Sambat date, a full month view, and essential calendar information directly from your menu bar.
+  <strong>Bhitte Patro</strong> is a lightweight and minimal Nepali calendar menu bar application for macOS. It provides quick access to the current Bikram Sambat date, a full month view, and essential calendar information directly from your menu bar.
 </p>
 
 ---
