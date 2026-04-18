@@ -15,6 +15,11 @@ struct CalendarView: View {
     @Binding var adDate: Date
     @Binding var bsDate: BSDate
     @Binding var viewMode: CalendarViewMode
+    
+    @EnvironmentObject var noteManager: PatroNoteManager
+    @State private var showNoteEditor: Bool = false
+    @State private var showAIChatView: Bool = false
+    @State private var popoverDate: BSDate? = nil
 
     private let rowSpacing: CGFloat = 2
     private let cellCornerRadius: CGFloat = 6
@@ -63,150 +68,134 @@ struct CalendarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header Section
-            headerSection
-                .frame(height: 38)
-                .padding(.bottom, 10)
+            if showNoteEditor, let sel = selectedDate {
+                NoteEditorView(date: sel, noteManager: _noteManager.wrappedValue) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showNoteEditor = false
+                    }
+                }
+                .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+            } else if showAIChatView {
+                AIChatView {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showAIChatView = false
+                    }
+                }
+                .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+            } else {
+                VStack(spacing: 0) {
+                    // Header Section
+                    headerSection
+                        .frame(height: 38)
+                        .padding(.bottom, 10)
 
-            // Weekday headers
-            weekdaySection
-                .frame(height: 32)
+                    // Weekday headers
+                    weekdaySection
+                        .frame(height: 32)
 
-            // Calendar grid with directional slide animation
-            calendarGridSection
-                .animation(.easeInOut(duration: 0.25), value: displayMonth)
+                    // Calendar grid with directional slide animation
+                    calendarGridSection
+                        .animation(.easeInOut(duration: 0.25), value: displayMonth)
 
-            // Selected date info
-            selectedDateSection
+                    // Selected date info / Settings
+                    footerSection
+                }
+                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
+            }
         }
         .padding(16)
     }
 
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: 0) {
-            ZStack {
-                HStack(spacing: 4) {
-                    Button(action: { navigate(-1) }) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.red)
-                            .frame(width: 28, height: 26)
-                            .background(Color.red.opacity(0.10), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-
-                    Divider()
-                        .frame(height: 14)
-
-                    Menu {
-                        ForEach(1...12, id: \.self) { month in
-                            Button(action: { displayMonth = month }) {
-                                HStack {
-                                    Text(NepaliCalendar.shared.months[month - 1])
-                                    if displayMonth == month {
-                                        Spacer()
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text(displayMonthName)
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(.secondary)
-                        }
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                    }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .contentTransition(.numericText())
-
-                    Divider()
-                        .frame(height: 14)
-
-                    Menu {
-                        ForEach(2060...2085, id: \.self) { year in
-                            Button(action: { displayYear = year }) {
-                                HStack {
-                                    Text(NepaliCalendar.shared.toNepaliDigits(year))
-                                    if displayYear == year {
-                                        Spacer()
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text(displayYearText)
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(.secondary)
-                        }
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                    }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .contentTransition(.numericText())
-
-                    Divider()
-                        .frame(height: 14)
-
-                    Button(action: { navigate(1) }) {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.red)
-                            .frame(width: 28, height: 26)
-                            .background(Color.red.opacity(0.10), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
+        HStack(spacing: 0) {
+            // Month/Year Navigation
+            HStack(spacing: 12) {
+                Button(action: { navigate(-1) }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 10, weight: .semibold))
+                        .frame(width: 32, height: 32)
+                        .background(Color.secondary.opacity(0.1), in: Circle())
+                        .contentShape(Rectangle())
                 }
-                .padding(.horizontal, 2)
-                .frame(height: 32)
-
-                HStack {
-                    if let today, !(today.year == displayYear && today.month == displayMonth) {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                displayYear = today.year
-                                displayMonth = today.month
-                                selectedDate = today
-                            }
-                        } label: {
-                            // Calendar with time icon
-                            Image(systemName: "calendar.badge.clock")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.red)
-                                .frame(width: 26, height: 26)
+                .buttonStyle(.plain)
+                
+                Menu {
+                    ForEach(1...12, id: \.self) { month in
+                        Button(action: { displayMonth = month }) {
+                            Text(NepaliCalendar.shared.months[month - 1])
                         }
-                        .background(Color.red.opacity(0.10), in: Capsule())
-                        .buttonStyle(.plain)
-                    } else {
-                        Color.clear.frame(width: 26, height: 26)
                     }
-
-                    Spacer()
-
-                    Button {
-                        NotificationCenter.default.post(
-                            name: .didChangeDefaultViewMode,
-                            object: nil,
-                            userInfo: ["mode": "settings"]
-                        )
-                    } label: {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 28, height: 28)
+                } label: {
+                    Text(displayMonthName)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                
+                Menu {
+                    ForEach(2060...2085, id: \.self) { year in
+                        Button(action: { displayYear = year }) {
+                            Text(NepaliCalendar.shared.toNepaliDigits(year))
+                        }
+                    }
+                } label: {
+                    Text(displayYearText)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                
+                Button(action: { navigate(1) }) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .frame(width: 32, height: 32)
+                        .background(Color.secondary.opacity(0.1), in: Circle())
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .foregroundStyle(.primary)
+            
+            Spacer()
+            
+            HStack(spacing: 12) {
+                // "Today" Button
+                if let today, !(today.year == displayYear && today.month == displayMonth) {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            displayYear = today.year
+                            displayMonth = today.month
+                            selectedDate = today
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.2.squarepath")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text("आज")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                        }
+                        .foregroundStyle(.red)
                     }
                     .buttonStyle(.plain)
+                    .transition(.opacity.combined(with: .scale))
+                }
+                
+                // AI Chat Button
+                if let today, today.year == displayYear && today.month == displayMonth {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showAIChatView = true
+                        }
+                    }) {
+                        Image(systemName: "sparkle")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 28, height: 28)
+                            .background(Color.purple.gradient, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity.combined(with: .scale))
                 }
             }
         }
@@ -252,8 +241,17 @@ struct CalendarView: View {
                         displayMonth: displayMonth
                     )
                     .contentShape(Rectangle())
-                    .onTapGesture {
-                        handleCellTap(cell: cell)
+                    .onTapGesture { handleCellTap(cell: cell) }
+                    .popover(item: Binding(
+                        get: { popoverDate == BSDate(year: cell.bsYear, month: cell.bsMonth, day: cell.bsDay) ? cell.toBSDate() : nil },
+                        set: { if $0 == nil { popoverDate = nil } }
+                    )) { date in
+                        PopoverContentView(date: date, onEdit: {
+                            popoverDate = nil
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showNoteEditor = true
+                            }
+                        })
                     }
                 }
             }
@@ -262,129 +260,109 @@ struct CalendarView: View {
         .animation(.easeInOut(duration: 0.2), value: displayMonth)
     }
 
-    // MARK: - Selected Date Section
-    private var selectedDateSection: some View {
-        Group {
-               if let sel = selectedDate {
+    // MARK: - Footer Section
+    private var footerSection: some View {
+        HStack(alignment: .center) {
+            // Selected date info
+            Group {
+                if let sel = selectedDate {
+                    let isToday = today?.year == sel.year && today?.month == sel.month && today?.day == sel.day
+                    let holiday = NepaliCalendar.shared.holidayText(year: sel.year, month: sel.month, day: sel.day)
+                    let upcoming = isToday ? NepaliCalendar.shared.nextHoliday(from: sel.year, month: sel.month, day: sel.day) : nil
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 4) {
+                            Text("\(NepaliCalendar.shared.months[sel.month - 1]) \(NepaliCalendar.shared.toNepaliDigits(sel.day))")
+                                .font(.system(size: 9, weight: .bold))
+                            
+                            Text(getEnglishDay(year: sel.year, month: sel.month, day: sel.day))
+                                .font(.system(size: 9, weight: .medium))
+                                .opacity(0.6)
+                        }
+                        .foregroundStyle(.secondary)
 
-                   let isToday = today?.year == sel.year && today?.month == sel.month && today?.day == sel.day
-                   
-                   let upcoming = isToday ? NepaliCalendar.shared.nextHoliday(
-                       from: sel.year,
-                       month: sel.month,
-                       day: sel.day
-                   ) : nil
-
-                   VStack(alignment: .leading, spacing: 6) {
-
-                       HStack {
-                           if isToday {
-                               Text("Today")
-                                   .font(.system(size: 12, weight: .semibold))
-                                   .foregroundStyle(.secondary)
-                               Text("\(NepaliCalendar.shared.months[sel.month - 1]) \(NepaliCalendar.shared.toNepaliDigits(sel.day))")
-                                   .font(.system(size: 12, weight: .semibold))
-                                   .foregroundStyle(.secondary)
-                           } else {
-                               Text("\(NepaliCalendar.shared.months[sel.month - 1]) \(NepaliCalendar.shared.toNepaliDigits(sel.day))")
-                                   .font(.system(size: 12, weight: .semibold))
-                                   .foregroundStyle(.secondary)
-                           }
-
-                           Spacer()
-
-                           if isToday {
-                               Text("Upcoming")
-                                   .font(.system(size: 12, weight: .semibold))
-                                   .foregroundStyle(.secondary)
-                           }
-                       }
-
-                       HStack {
-                           // LEFT SIDE
-                           HStack(spacing: 6) {
-                               if let hText = NepaliCalendar.shared.holidayText(
-                                   year: sel.year,
-                                   month: sel.month,
-                                   day: sel.day
-                               ) {
-                                   Text(hText)
-                                       .foregroundStyle(.red)
-                               }
-
-                               if let tithi = NepaliCalendar.shared.tithiText(
-                                   year: sel.year,
-                                   month: sel.month,
-                                   day: sel.day
-                               ) {
-                                   Text(tithi)
-                                       .foregroundStyle(.secondary)
-                               }
-                           }
-                           .font(.system(size: 13, weight: .medium))
-                           .lineLimit(1)
-
-                           Spacer()
-
-                           // RIGHT SIDE (Upcoming)
-                           if let upcoming = upcoming {
-                               Text("\(upcoming.text) \(NepaliCalendar.shared.toNepaliDigits(upcoming.daysAway)) दिन पछि ")
-                                   .font(.system(size: 13, weight: .medium))
-                                   .foregroundStyle(.red)
-                                   .lineLimit(1)
-                           }
-                       }
-                   }
-                   .frame(maxWidth: .infinity, alignment: .leading)
-                   .padding(.horizontal, 12)
-                   .padding(.vertical, 8)
-                   .background(
-                       Color.secondary.opacity(0.05),
-                       in: RoundedRectangle(cornerRadius: 8)
-                   )
-               }
-            else {
-                // Placeholder when no date selected
-                Text("Select a date")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.secondary.opacity(0.5))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+                        Group {
+                            if let holidayText = holiday {
+                                Text(holidayText)
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(.red)
+                            } else if let upcomingHoliday = upcoming {
+                                HStack(spacing: 4) {
+                                    Text("\(NepaliCalendar.shared.toNepaliDigits(upcomingHoliday.daysAway)) दिन मा")
+                                        .foregroundStyle(.white)
+                                    Text(upcomingHoliday.text)
+                                        .foregroundStyle(.red)
+                                }
+                                .font(.system(size: 10, weight: .medium))
+                            } else {
+                                Text(isToday ? "No upcoming holidays" : "No holiday")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                } else {
+                    Text("Select a date")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.secondary.opacity(0.5))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            // Settings Button
+            Button {
+                NotificationCenter.default.post(
+                    name: .didChangeDefaultViewMode,
+                    object: nil,
+                    userInfo: ["mode": "settings"]
+                )
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            Color.secondary.opacity(0.04),
+            in: RoundedRectangle(cornerRadius: 10)
+        )
     }
 
     // MARK: - Helper Methods
     private func handleCellTap(cell: CellModel) {
         let tapped = BSDate(year: cell.bsYear, month: cell.bsMonth, day: cell.bsDay)
-
-        if cell.bsYear == displayYear && cell.bsMonth == displayMonth {
-            selectedDate = tapped
+        
+        selectedDate = tapped
+        
+        if popoverDate == tapped {
+            popoverDate = nil
         } else {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                displayYear = cell.bsYear
-                displayMonth = cell.bsMonth
-                selectedDate = tapped
-            }
+            popoverDate = tapped
         }
     }
 
     private func navigate(_ delta: Int) {
-        var m = displayMonth + delta
-        var y = displayYear
-        if m < 1 { m = 12; y -= 1 }
-        else if m > 12 { m = 1; y += 1 }
-        guard y >= 2060 && y <= 2085 else { return }
-        if NepaliCalendar.shared.daysInMonth(year: y, month: m) > 0 {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                displayMonth = m
-                displayYear = y
-                if selectedDate == nil {
-                    selectedDate = today
-                }
-            }
+        var newMonth = displayMonth + delta
+        var newYear = displayYear
+        
+        if newMonth < 1 {
+            newMonth = 12
+            newYear -= 1
+        } else if newMonth > 12 {
+            newMonth = 1
+            newYear += 1
+        }
+        
+        guard newYear >= 2060 && newYear <= 2085 else { return }
+        
+        withAnimation(.easeInOut(duration: 0.2)) {
+            displayMonth = newMonth
+            displayYear = newYear
         }
     }
 
@@ -456,6 +434,59 @@ struct CalendarView: View {
     }
 }
 
+// MARK: - Popover Content
+struct PopoverContentView: View {
+    let date: BSDate
+    var onEdit: () -> Void
+    @EnvironmentObject var noteManager: PatroNoteManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Tithi
+            VStack(alignment: .leading, spacing: 2) {
+                Text("तिथि")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+                
+                Text(NepaliCalendar.shared.tithiText(year: date.year, month: date.month, day: date.day) ?? "-")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            
+            Divider()
+            
+            // Notes
+            VStack(alignment: .leading, spacing: 4) {
+                let dateString = "\(date.year)-\(String(format: "%02d", date.month))-\(String(format: "%02d", date.day))"
+                let hasNote = noteManager.notes[dateString] != nil && !noteManager.notes[dateString]!.isEmpty
+                
+                HStack {
+                    Text("NOTES")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                
+                if hasNote {
+                    Text(noteManager.notes[dateString]!)
+                        .font(.system(size: 11))
+                        .lineLimit(4)
+                }
+                
+                Button(action: onEdit) {
+                    Label(hasNote ? "Edit Note" : "Add Note", systemImage: hasNote ? "pencil.line" : "plus")
+                        .font(.system(size: 11))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+
+            }
+        }
+        .padding(12)
+        .frame(width: 180)
+    }
+}
+
 // MARK: - Cell Model
 fileprivate struct CellModel: Equatable {
     let bsYear: Int
@@ -466,6 +497,10 @@ fileprivate struct CellModel: Equatable {
     let isHoliday: Bool
     let englishDay: String
     let nepaliDay: String
+    
+    func toBSDate() -> BSDate {
+        BSDate(year: bsYear, month: bsMonth, day: bsDay)
+    }
     
     static func == (lhs: CellModel, rhs: CellModel) -> Bool {
         return lhs.bsYear == rhs.bsYear &&
@@ -486,6 +521,8 @@ fileprivate struct CalendarCellView: View {
     let selectedDate: BSDate?
     let displayYear: Int
     let displayMonth: Int
+    
+    @EnvironmentObject var noteManager: PatroNoteManager
 
     @State private var isCurrentMonth = false
 
@@ -498,6 +535,9 @@ fileprivate struct CalendarCellView: View {
             }
             return false
         }()
+        
+        let dateString = "\(cell.bsYear)-\(String(format: "%02d", cell.bsMonth))-\(String(format: "%02d", cell.bsDay))"
+        let hasNote = noteManager.notes[dateString] != nil && !noteManager.notes[dateString]!.isEmpty
 
         let animationDelay = Double(index) * 0.003
 
@@ -509,6 +549,20 @@ fileprivate struct CalendarCellView: View {
             } else if isSelected {
                 RoundedRectangle(cornerRadius: cellCornerRadius)
                     .fill(Color.secondary.opacity(0.15))
+            }
+            
+            // Note indicator
+            if hasNote {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 7))
+                            .foregroundStyle(cell.isToday ? .white : .secondary)
+                            .padding(4)
+                    }
+                    Spacer()
+                }
             }
 
             // Content
@@ -579,3 +633,6 @@ fileprivate struct CalendarCellView: View {
     }
 }
 
+extension BSDate: Identifiable {
+    var id: String { "\(year)-\(month)-\(day)" }
+}

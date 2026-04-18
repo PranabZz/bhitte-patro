@@ -68,7 +68,7 @@ class NepaliCalendar: ObservableObject {
         return nil
     }
     
-    private func addDays(to date: BSDate, days: Int) -> BSDate? {
+    func addDays(to date: BSDate, days: Int) -> BSDate? {
         var y = date.year
         var m = date.month
         var d = date.day + days
@@ -258,6 +258,41 @@ class NepaliCalendar: ObservableObject {
         nepaliNumberCacheLock.withLock { nepaliNumberCache[number] = result }
         return result
     }
+    
+    func findNextHoliday(matching synonyms: [String]?) -> (name: String, date: BSDate)? {
+        guard let today = convertToBSDate(from: Date()) else { return nil }
+        
+        for i in 0...365 {
+            if let date = addDays(to: today, days: i) {
+                if let holidayNames = holidays[date.year]?[date.month]?[date.day], !holidayNames.isEmpty {
+                    let mainHoliday = holidayNames[0]
+                    
+                    if let synonyms = synonyms, !synonyms.isEmpty {
+                        for synonym in synonyms {
+                            if mainHoliday.caseInsensitiveCompare(synonym) == .orderedSame {
+                                return (mainHoliday, date)
+                            }
+                        }
+                    } else { // Generic search
+                        return (mainHoliday, date)
+                    }
+                }
+            }
+        }
+        return nil
+    }
+
+    func daysBetween(from: BSDate, to: BSDate) -> Int? {
+        guard let fromAD = convertToADDate(from: from), let toAD = convertToADDate(from: to) else {
+            return nil
+        }
+        let calendar = Calendar(identifier: .gregorian)
+        let fromDate = calendar.startOfDay(for: fromAD)
+        let toDate = calendar.startOfDay(for: toAD)
+        
+        let components = calendar.dateComponents([.day], from: fromDate, to: toDate)
+        return components.day
+    }
 }
 
 class DateUpdater: ObservableObject {
@@ -319,12 +354,14 @@ enum CalendarViewMode: String, CaseIterable {
 @main
 struct BhittePatroApp: App {
     @StateObject private var dateUpdater = DateUpdater()
+    @StateObject private var noteManager = PatroNoteManager.shared
 
     var body: some Scene {
         // Menu bar extra remains your primary UI
         MenuBarExtra {
             VCenterView()
                 .environmentObject(dateUpdater)
+                .environmentObject(noteManager)
                 .onAppear {
                     CalendarManager.shared.checkAndAutoUpdate()
                 }
@@ -434,7 +471,7 @@ struct VCenterView: View {
                     })
             }
         }
-        .frame(width: viewMode == .today ? 220 : viewMode == .settings ? 400 : 340, height: viewMode == .today ? 220 : viewMode == .settings ? 520 : 470)
+        .frame(width: viewMode == .today ? 210 : viewMode == .settings ? 390 : 330, height: viewMode == .today ? 220 : viewMode == .settings ? 520 : 470)
         .animation(.easeInOut(duration: 0.2), value: viewMode)
         .onReceive(NotificationCenter.default.publisher(for: .didChangeDefaultViewMode)) { notification in
             if let mode = notification.userInfo?["mode"] as? String {
