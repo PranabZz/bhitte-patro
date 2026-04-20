@@ -10,6 +10,48 @@ import Foundation
 class AIResponseGenerator {
     static let shared = AIResponseGenerator()
     
+    // MARK: - Knowledge Base Models
+    struct KnowledgeBase: Codable {
+        let calendarInfo: CalendarInfo
+        let tithiInfo: TithiInfo
+        let holidays: [HolidayInfo]
+        
+        enum CodingKeys: String, CodingKey {
+            case calendarInfo = "calendar_info"
+            case tithiInfo = "tithi_info"
+            case holidays
+        }
+    }
+    
+    struct CalendarInfo: Codable {
+        let name: String
+        let description: String
+        let history: String
+        let whyItExists: String
+        let newYear: String
+        
+        enum CodingKeys: String, CodingKey {
+            case name, description, history
+            case whyItExists = "why_it_exists"
+            case newYear = "new_year"
+        }
+    }
+    
+    struct TithiInfo: Codable {
+        let definition: String
+        let phases: [String: String]
+        let significance: String
+        let names: [String]
+    }
+    
+    struct HolidayInfo: Codable {
+        let name: String
+        let significance: String
+        let traditions: String
+    }
+    
+    private var knowledgeBase: KnowledgeBase?
+    
     private var conversationState: ConversationState = .idle
     private var userOffDays: [Int]? // 0 = Sunday, 6 = Saturday
     private var lastHolidayQueried: String?
@@ -26,6 +68,7 @@ class AIResponseGenerator {
         case idle
         case awaitingOffDays
         case awaitingLeaveDayCount
+        case awaitingDesiredBreakLength
         case awaitingConversionType
         case awaitingConversionDate
         case awaitingDaysBetweenRange
@@ -57,6 +100,24 @@ class AIResponseGenerator {
         "janai purnima": ["janai purnima", "जनै पूर्णिमा", "rakshya bandhan"]
     ]
     
+    private init() {
+        loadKnowledgeBase()
+    }
+    
+    private func loadKnowledgeBase() {
+        guard let url = Bundle.main.url(forResource: "KnowledgeBase", withExtension: "json") ??
+                        Bundle.main.url(forResource: "KnowledgeBase", withExtension: "json", subdirectory: "data") else {
+            return
+        }
+        
+        do {
+            let data = try Data(contentsOf: url)
+            self.knowledgeBase = try JSONDecoder().decode(KnowledgeBase.self, from: data)
+        } catch {
+            print("Error loading KnowledgeBase: \(error)")
+        }
+    }
+    
     private let monthSynonyms: [Int: [String]] = [
         1: ["baishakh", "baisakh", "बैशाख"],
         2: ["jestha", "jeth", "जेठ"],
@@ -82,7 +143,7 @@ class AIResponseGenerator {
         if words.count <= 3 {
             for (index, synonyms) in monthSynonyms {
                 if synonyms.contains(where: { lowercasedInput.contains($0) }) {
-                    let nepaliName = NepaliCalendar.shared.months[index - 1]
+                    let nepaliName = BhitteCalendar.shared.months[index - 1]
                     // If it's just the month name or "what is baishakh", return conversion
                     if words.count == 1 || lowercasedInput.contains("what") || lowercasedInput.contains("convert") || lowercasedInput.contains("meaning") {
                         let suffix = index == 1 ? "st" : index == 2 ? "nd" : index == 3 ? "rd" : "th"
@@ -110,7 +171,7 @@ class AIResponseGenerator {
             // If they just say "and tomorrow?" or "and next week?"
             if lowercasedInput.contains("today") { return getTodaysDateInfo() }
             if lowercasedInput.contains("tomorrow") {
-                if let tomorrow = NepaliCalendar.shared.addDays(to: NepaliCalendar.shared.convertToBSDate(from: Date())!, days: 1) {
+                if let tomorrow = BhitteCalendar.shared.addDays(to: BhitteCalendar.shared.convertToBSDate(from: Date())!, days: 1) {
                     return getInfoForBSDate(date: tomorrow)
                 }
             }
@@ -121,6 +182,8 @@ class AIResponseGenerator {
             return handleOffDaysResponse(for: lowercasedInput)
         case .awaitingLeaveDayCount:
             return handleLeaveCountResponse(for: lowercasedInput)
+        case .awaitingDesiredBreakLength:
+            return handleDesiredBreakLengthResponse(for: lowercasedInput)
         case .awaitingConversionType:
             return handleConversionTypeResponse(for: lowercasedInput)
         case .awaitingConversionDate:
@@ -230,12 +293,12 @@ class AIResponseGenerator {
         let startBS = BSDate(year: year, month: start.month, day: start.day)
         let endBS = BSDate(year: year, month: end.month, day: end.day)
         
-        if let days = NepaliCalendar.shared.daysBetween(from: startBS, to: endBS) {
-            let startMonthName = NepaliCalendar.shared.months[start.month - 1]
-            let endMonthName = NepaliCalendar.shared.months[end.month - 1]
-            let startDayDigits = NepaliCalendar.shared.toNepaliDigits(start.day)
-            let endDayDigits = NepaliCalendar.shared.toNepaliDigits(end.day)
-            let yearDigits = NepaliCalendar.shared.toNepaliDigits(year)
+        if let days = BhitteCalendar.shared.daysBetween(from: startBS, to: endBS) {
+            let startMonthName = BhitteCalendar.shared.months[start.month - 1]
+            let endMonthName = BhitteCalendar.shared.months[end.month - 1]
+            let startDayDigits = BhitteCalendar.shared.toNepaliDigits(start.day)
+            let endDayDigits = BhitteCalendar.shared.toNepaliDigits(end.day)
+            let yearDigits = BhitteCalendar.shared.toNepaliDigits(year)
             
             let absDays = abs(days)
             return "There are **\(absDays) days** between \(startMonthName) \(startDayDigits) and \(endMonthName) \(endDayDigits), \(yearDigits) BS. [DATE:\(startBS.year):\(startBS.month):\(startBS.day)] [DATE:\(endBS.year):\(endBS.month):\(endBS.day)]"
@@ -249,7 +312,7 @@ class AIResponseGenerator {
             return "नमस्ते! How can I help you with your schedule today? You can ask about holidays, calculate days between dates, or plan a vacation."
         }
         
-        if matches(input: input, keywords: ["what is today", "today's date", "today date"]) {
+        if matches(input: input, keywords: ["what is today", "today's date", "today date", "tell me about today"]) {
             lastAction = .checkingDate
             return getTodaysDateInfo()
         }
@@ -297,7 +360,7 @@ class AIResponseGenerator {
         // Check for notes if no holiday was specifically named
         if let noteResult = findNextNoteMatch(matching: input) {
             lastAction = .checkingDate
-            let daysRemaining = NepaliCalendar.shared.daysBetween(from: NepaliCalendar.shared.convertToBSDate(from: Date())!, to: noteResult.date) ?? 0
+            let daysRemaining = BhitteCalendar.shared.daysBetween(from: BhitteCalendar.shared.convertToBSDate(from: Date())!, to: noteResult.date) ?? 0
             let dateTag = "[DATE:\(noteResult.date.year):\(noteResult.date.month):\(noteResult.date.day)]"
             
             if daysRemaining == 0 {
@@ -331,21 +394,39 @@ class AIResponseGenerator {
         }
 
         let vacationTriggers = [
-            "when should i take leave",
-            "best time to take leave",
             "plan a vacation",
-            "exhausted from work",
+            "plan vacation",
+            "take leave",
+            "take a break",
             "need a break",
-            "vacation i can take this month",
-            "best day to take leave",
-            "i'm exhausted",
-            "i am exhausted"
+            "vacation planning",
+            "best time to leave",
+            "when to take off",
+            "exhausted",
+            "tired of work"
         ]
         
-        if matches(input: input, keywords: vacationTriggers) {
+        if vacationTriggers.contains(where: { input.contains($0) }) {
             conversationState = .awaitingOffDays
             lastAction = .planningVacation
             return "I can help you plan a vacation. Saturday is always off. Which other day do you have off? CHAT_OPTIONS:[Friday,Sunday]"
+        }
+        
+        // Knowledge Base Triggers
+        if input.contains("bikram sambat") || input.contains("nepali calendar history") || input.contains("why nepali calendar") {
+            if let info = knowledgeBase?.calendarInfo {
+                return "**\(info.name)**\n\n\(info.description)\n\n**History:** \(info.history)\n\n**Why it exists:** \(info.whyItExists)"
+            }
+        }
+        
+        if input.contains("what is tithi") || input.contains("tithi definition") || input.contains("explain tithi") {
+            if let info = knowledgeBase?.tithiInfo {
+                return "**What is Tithi?**\n\n\(info.definition)\n\n**Phases:**\n- *Shukla Paksha:* \(info.phases["shukla_paksha"] ?? "")\n- *Krishna Paksha:* \(info.phases["krishna_paksha"] ?? "")\n\n**Significance:** \(info.significance)"
+            }
+        }
+        
+        if input.contains("culture") || input.contains("traditions") || input.contains("tell me about nepal") {
+            return "Nepali culture is rich with festivals and traditions! You can ask me about major holidays like Dashain or Tihar, or about the Bikram Sambat calendar and Tithis."
         }
         
         // Fallback: if input looks like just a date (e.g. "17th baishakh")
@@ -357,35 +438,40 @@ class AIResponseGenerator {
     }
     
     private func getTodaysDateInfo() -> String {
-        guard let today = NepaliCalendar.shared.convertToBSDate(from: Date()) else {
+        guard let today = BhitteCalendar.shared.convertToBSDate(from: Date()) else {
             return "I'm having trouble getting today's date."
         }
-        let monthName = NepaliCalendar.shared.months[today.month - 1]
-        let nepaliDay = NepaliCalendar.shared.toNepaliDigits(today.day)
-        let nepaliYear = NepaliCalendar.shared.toNepaliDigits(today.year)
+        let monthName = BhitteCalendar.shared.months[today.month - 1]
+        let nepaliDay = BhitteCalendar.shared.toNepaliDigits(today.day)
+        let nepaliYear = BhitteCalendar.shared.toNepaliDigits(today.year)
         
         var response = "Today is **\(monthName) \(nepaliDay), \(nepaliYear)** [DATE:\(today.year):\(today.month):\(today.day)]."
         
-        if let tithi = NepaliCalendar.shared.tithiText(year: today.year, month: today.month, day: today.day) {
+        if let tithi = BhitteCalendar.shared.tithiText(year: today.year, month: today.month, day: today.day) {
             response += "\nTithi: **\(tithi)**."
         }
-        if let holiday = NepaliCalendar.shared.holidayText(year: today.year, month: today.month, day: today.day) {
-            response += "\nIt is also **\(holiday)**."
+        if let holiday = BhitteCalendar.shared.holidayText(year: today.year, month: today.month, day: today.day) {
+            response += "\n\nIt is **\(holiday)**!"
+            
+            // Explain the holiday if we have info
+            if let holidayInfo = findHolidayInfo(named: holiday) {
+                response += "\n\n**Significance:** \(holidayInfo.significance)\n\n**Traditions:** \(holidayInfo.traditions)"
+            }
         }
         return response
     }
     
     private func getInfoForBSDate(date: BSDate) -> String {
-        let monthName = NepaliCalendar.shared.months[date.month - 1]
-        let nepaliDay = NepaliCalendar.shared.toNepaliDigits(date.day)
+        let monthName = BhitteCalendar.shared.months[date.month - 1]
+        let nepaliDay = BhitteCalendar.shared.toNepaliDigits(date.day)
         var response = "**\(monthName) \(nepaliDay)** [DATE:\(date.year):\(date.month):\(date.day)]:"
         
         var detailsFound = false
-        if let tithi = NepaliCalendar.shared.tithiText(year: date.year, month: date.month, day: date.day) {
+        if let tithi = BhitteCalendar.shared.tithiText(year: date.year, month: date.month, day: date.day) {
             response += "\n- Tithi: **\(tithi)**"
             detailsFound = true
         }
-        if let holiday = NepaliCalendar.shared.holidayText(year: date.year, month: date.month, day: date.day) {
+        if let holiday = BhitteCalendar.shared.holidayText(year: date.year, month: date.month, day: date.day) {
             response += "\n- Holiday: **\(holiday)**"
             detailsFound = true
         }
@@ -405,16 +491,16 @@ class AIResponseGenerator {
             return "I couldn't understand which date you're asking about. Please use a format like '18th Baishakh'."
         }
         
-        let monthName = NepaliCalendar.shared.months[date.month - 1]
-        let nepaliDay = NepaliCalendar.shared.toNepaliDigits(date.day)
+        let monthName = BhitteCalendar.shared.months[date.month - 1]
+        let nepaliDay = BhitteCalendar.shared.toNepaliDigits(date.day)
         var response = "On **\(monthName) \(nepaliDay)** [DATE:\(date.year):\(date.month):\(date.day)]:"
         
         var detailsFound = false
-        if let tithi = NepaliCalendar.shared.tithiText(year: date.year, month: date.month, day: date.day) {
+        if let tithi = BhitteCalendar.shared.tithiText(year: date.year, month: date.month, day: date.day) {
             response += "\n- Tithi is **\(tithi)**."
             detailsFound = true
         }
-        if let holiday = NepaliCalendar.shared.holidayText(year: date.year, month: date.month, day: date.day) {
+        if let holiday = BhitteCalendar.shared.holidayText(year: date.year, month: date.month, day: date.day) {
             response += "\n- It's **\(holiday)**."
             detailsFound = true
         }
@@ -441,28 +527,51 @@ class AIResponseGenerator {
     
     private func handleLeaveCountResponse(for input: String) -> String {
         let numericInput = input.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
-        guard let leaveDays = Int(numericInput), (1...10).contains(leaveDays) else {
-            return "Please provide a valid number of days (1-10)."
+        guard let leaveDays = Int(numericInput), (0...10).contains(leaveDays) else {
+            return "Please provide a valid number of days (0-10)."
         }
         
         self.leaveDaysToTake = leaveDays
-        let result = calculateBestLeaveDay(leaveDays: leaveDays)
-        resetConversation()
+        conversationState = .awaitingDesiredBreakLength
+        
+        return "Got it. How long of a break are you looking for? CHAT_OPTIONS:[3 days,4 days,5+ days,10+ days]"
+    }
+    
+    private func handleDesiredBreakLengthResponse(for input: String) -> String {
+        let numericInput = input.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        guard let desiredLength = Int(numericInput) else {
+            return "Please select a break length. CHAT_OPTIONS:[3 days,4 days,5+ days,10+ days]"
+        }
+        
+        let leaveDays = self.leaveDaysToTake ?? 0
+        let result = calculateBestVacation(leaveDays: leaveDays, minTotalLength: desiredLength, searchDays: 40)
+        
+        let next40Message = "I searched for potential breaks within the next **40 days**."
 
         guard let bestOption = result else {
-            return "I looked ahead 4 months but couldn't find a perfect opportunity. Try taking fewer leave days?"
+            // Stay in the current state to let them try a different break length
+            return "\(next40Message)\n\nSorry, I couldn't find a **\(desiredLength)-day** break using only **\(leaveDays) leave days**. Would you like to look for a different length of break? CHAT_OPTIONS:[3 days,4 days,5+ days,10+ days]"
         }
         
         let (leaveDates, fullBlock) = bestOption
         let totalDays = fullBlock.count
         
-        let leaveDateStrings = leaveDates.map { date in
-            let month = NepaliCalendar.shared.months[date.month - 1]
-            let day = NepaliCalendar.shared.toNepaliDigits(date.day)
-            return "**\(month) \(day)**"
-        }.joined(separator: ", ")
+        var response = "\(next40Message)\n\n"
         
-        var response = "To get a **\(totalDays)-day** break, you should take leave on \(leaveDateStrings).\n\nYour full break will be:\n"
+        if leaveDates.isEmpty {
+            response += "Great news! You can get a **\(totalDays)-day** break without taking any leave days!\n\nYour break will be:\n"
+        } else {
+            let leaveDateStrings = leaveDates.map { date in
+                let month = BhitteCalendar.shared.months[date.month - 1]
+                let day = BhitteCalendar.shared.toNepaliDigits(date.day)
+                return "**\(month) \(day)**"
+            }.joined(separator: ", ")
+            
+            response += "To get a **\(totalDays)-day** break, you should take leave on \(leaveDateStrings).\n\nYour full break will be:\n"
+        }
+        
+        // Reset only on success
+        resetConversation()
         
         // Sort full block by date
         let sortedBlock = fullBlock.sorted { d1, d2 in
@@ -478,64 +587,62 @@ class AIResponseGenerator {
         return response
     }
 
-    private func calculateBestLeaveDay(leaveDays: Int) -> (leaveDates: [BSDate], fullBlock: [BSDate])? {
-        guard let offDays = userOffDays, let today = NepaliCalendar.shared.convertToBSDate(from: Date()) else { return nil }
+    private func calculateBestVacation(leaveDays: Int, minTotalLength: Int, searchDays: Int) -> (leaveDates: [BSDate], fullBlock: [BSDate])? {
+        guard let offDays = userOffDays, let today = BhitteCalendar.shared.convertToBSDate(from: Date()) else { return nil }
 
         var bestOption: (leaveDates: [BSDate], fullBlock: [BSDate])?
 
-        // Search for the BEST (longest) vacation block within the next 30 days
-        for i in 1...30 {
-            guard let startDate = NepaliCalendar.shared.addDays(to: today, days: i) else { continue }
+        // Search for a vacation block that meets minTotalLength within searchDays
+        for i in 1...searchDays {
+            guard let startDate = BhitteCalendar.shared.addDays(to: today, days: i) else { continue }
             
-            var potentialLeaveDays: [BSDate] = []
+            // For each starting day, try to build a block using up to 'leaveDays'
             var cursorDate = startDate
-            var daysFound = 0
+            var currentLeaveUsed = 0
+            var currentBlock: [BSDate] = []
+            var leaveDatesUsed: [BSDate] = []
             
-            // Try to find consecutive working days to take as leave
-            // Or skip non-working days to find the next available working days
-            while potentialLeaveDays.count < leaveDays {
-                if isWorkDay(date: cursorDate, offDays: offDays) {
-                    potentialLeaveDays.append(cursorDate)
+            // Expand forward until we hit a workday we can't take leave for
+            while true {
+                let isWork = isWorkDay(date: cursorDate, offDays: offDays)
+                if isWork {
+                    if currentLeaveUsed < leaveDays {
+                        currentLeaveUsed += 1
+                        leaveDatesUsed.append(cursorDate)
+                        currentBlock.append(cursorDate)
+                    } else {
+                        // Out of leave days
+                        break
+                    }
+                } else {
+                    // Holiday or Weekend
+                    currentBlock.append(cursorDate)
                 }
-                guard let nextDay = NepaliCalendar.shared.addDays(to: cursorDate, days: 1) else { break }
+                
+                guard let nextDay = BhitteCalendar.shared.addDays(to: cursorDate, days: 1) else { break }
                 cursorDate = nextDay
                 
                 // Safety: don't look too far ahead for a single block
-                daysFound += 1
-                if daysFound > 45 { break } 
+                if currentBlock.count > 45 { break }
             }
             
-            if potentialLeaveDays.count != leaveDays { continue }
-            
-            // Calculate total block size by expanding in both directions
-            var vacationBlockSet: Set<BSDate> = Set(potentialLeaveDays)
-            
-            var backDate = potentialLeaveDays.first!
+            // Also expand backward from startDate to catch any adjacent non-work days
+            var backDate = startDate
             while true {
-                guard let prevDay = NepaliCalendar.shared.addDays(to: backDate, days: -1) else { break }
+                guard let prevDay = BhitteCalendar.shared.addDays(to: backDate, days: -1) else { break }
                 if !isWorkDay(date: prevDay, offDays: offDays) {
-                    vacationBlockSet.insert(prevDay)
+                    currentBlock.insert(prevDay, at: 0)
                     backDate = prevDay
-                } else { break }
+                } else {
+                    break
+                }
             }
             
-            var fwdDate = potentialLeaveDays.last!
-            while true {
-                guard let nextDay = NepaliCalendar.shared.addDays(to: fwdDate, days: 1) else { break }
-                if !isWorkDay(date: nextDay, offDays: offDays) {
-                    vacationBlockSet.insert(nextDay)
-                    fwdDate = nextDay
-                } else { break }
-            }
-            
-            let currentFullBlock = Array(vacationBlockSet).sorted { d1, d2 in
-                if d1.year != d2.year { return d1.year < d2.year }
-                if d1.month != d2.month { return d1.month < d2.month }
-                return d1.day < d2.day
-            }
-            
-            if bestOption == nil || currentFullBlock.count > bestOption!.fullBlock.count {
-                bestOption = (potentialLeaveDays, currentFullBlock)
+            if currentBlock.count >= minTotalLength {
+                // If we found multiple, prefer the one with the MOST total days
+                if bestOption == nil || currentBlock.count > bestOption!.fullBlock.count {
+                    bestOption = (leaveDatesUsed, currentBlock)
+                }
             }
         }
 
@@ -543,15 +650,21 @@ class AIResponseGenerator {
     }
     
     private func isWorkDay(date: BSDate, offDays: [Int]) -> Bool {
-        if NepaliCalendar.shared.holidayText(year: date.year, month: date.month, day: date.day) != nil {
+        if BhitteCalendar.shared.holidayText(year: date.year, month: date.month, day: date.day) != nil {
             return false
         }
-        guard let adDate = NepaliCalendar.shared.convertToADDate(from: date) else { return true }
+        guard let adDate = BhitteCalendar.shared.convertToADDate(from: date) else { return true }
         let weekday = Calendar.current.component(.weekday, from: adDate) - 1 // 0=Sun, 6=Sat
         
         if weekday == 6 { return false } // Saturday is ALWAYS a holiday
         
         return !offDays.contains(weekday)
+    }
+
+    private func findHolidayInfo(named name: String) -> HolidayInfo? {
+        return knowledgeBase?.holidays.first { info in
+            info.name.lowercased() == name.lowercased() || name.lowercased().contains(info.name.lowercased())
+        }
     }
 
     private func findHolidayName(in input: String) -> String? {
@@ -575,7 +688,7 @@ class AIResponseGenerator {
     }
 
     private func findNextHoliday(named holidayName: String?) -> String {
-        let today = NepaliCalendar.shared.convertToBSDate(from: Date())!
+        let today = BhitteCalendar.shared.convertToBSDate(from: Date())!
         
         let synonyms: [String]
         if let name = holidayName {
@@ -584,18 +697,25 @@ class AIResponseGenerator {
             synonyms = []
         }
 
-        if let result = NepaliCalendar.shared.findNextHoliday(matching: synonyms.isEmpty ? nil : synonyms) {
-            let daysRemaining = NepaliCalendar.shared.daysBetween(from: today, to: result.date) ?? 0
+        if let result = BhitteCalendar.shared.findNextHoliday(matching: synonyms.isEmpty ? nil : synonyms) {
+            let daysRemaining = BhitteCalendar.shared.daysBetween(from: today, to: result.date) ?? 0
             
             let dateTag = "[DATE:\(result.date.year):\(result.date.month):\(result.date.day)]"
             
+            var response = ""
             if daysRemaining == 0 {
-                return "Today is **\(result.name)**! \(dateTag)"
+                response = "Today is **\(result.name)**! \(dateTag)"
             } else if daysRemaining == 1 {
-                return "**\(result.name)** is tomorrow! \(dateTag)"
+                response = "**\(result.name)** is tomorrow! \(dateTag)"
             } else {
-                return "**\(result.name)** is in **\(daysRemaining) days**. \(dateTag)"
+                response = "**\(result.name)** is in **\(daysRemaining) days**. \(dateTag)"
             }
+            
+            if let holidayInfo = findHolidayInfo(named: result.name) {
+                response += "\n\n**Significance:** \(holidayInfo.significance)\n\n**Traditions:** \(holidayInfo.traditions)"
+            }
+            
+            return response
         } else {
             let display = holidayName ?? "any holiday"
             return "I couldn't find \(display) in the upcoming months."
@@ -624,7 +744,7 @@ class AIResponseGenerator {
         }
         
         if let m = foundMonth {
-            let year = NepaliCalendar.shared.convertToBSDate(from: Date())?.year ?? 2081
+            let year = BhitteCalendar.shared.convertToBSDate(from: Date())?.year ?? 2081
             return BSDate(year: year, month: m, day: foundDay ?? 1)
         }
         return nil
@@ -632,13 +752,13 @@ class AIResponseGenerator {
 
     private func calculateDaysUntil(input: String) -> String {
         if let targetDate = parseDate(from: input) {
-            if let today = NepaliCalendar.shared.convertToBSDate(from: Date()) {
+            if let today = BhitteCalendar.shared.convertToBSDate(from: Date()) {
                 var finalTargetDate = targetDate
                 if (targetDate.month < today.month || (targetDate.month == today.month && targetDate.day < today.day)) {
                     finalTargetDate.year += 1
                 }
-                if let days = NepaliCalendar.shared.daysBetween(from: today, to: finalTargetDate) {
-                    let monthName = NepaliCalendar.shared.months[targetDate.month - 1]
+                if let days = BhitteCalendar.shared.daysBetween(from: today, to: finalTargetDate) {
+                    let monthName = BhitteCalendar.shared.months[targetDate.month - 1]
                     let dateTag = "[DATE:\(finalTargetDate.year):\(finalTargetDate.month):\(finalTargetDate.day)]"
                     return "There are **\(days) days** until \(monthName) \(targetDate.day). \(dateTag)"
                 }
@@ -647,7 +767,7 @@ class AIResponseGenerator {
         
         // Fallback: check notes
         if let noteResult = findNextNoteMatch(matching: input) {
-            let daysRemaining = NepaliCalendar.shared.daysBetween(from: NepaliCalendar.shared.convertToBSDate(from: Date())!, to: noteResult.date) ?? 0
+            let daysRemaining = BhitteCalendar.shared.daysBetween(from: BhitteCalendar.shared.convertToBSDate(from: Date())!, to: noteResult.date) ?? 0
             let dateTag = "[DATE:\(noteResult.date.year):\(noteResult.date.month):\(noteResult.date.day)]"
             return "Your note **\(noteResult.name)** is in **\(daysRemaining) days**. \(dateTag)"
         }
@@ -687,7 +807,7 @@ class AIResponseGenerator {
         
         if type == .bsToAD {
             let bsDate = BSDate(year: year, month: month, day: day)
-            if let adDate = NepaliCalendar.shared.convertToADDate(from: bsDate) {
+            if let adDate = BhitteCalendar.shared.convertToADDate(from: bsDate) {
                 let formatter = DateFormatter()
                 formatter.dateStyle = .long
                 return "The AD equivalent of **\(year)-\(month)-\(day) BS** is **\(formatter.string(from: adDate))**."
@@ -699,10 +819,10 @@ class AIResponseGenerator {
             dateComponents.month = month
             dateComponents.day = day
             if let adDate = Calendar.current.date(from: dateComponents),
-               let bsDate = NepaliCalendar.shared.convertToBSDate(from: adDate) {
-                let monthName = NepaliCalendar.shared.months[bsDate.month - 1]
-                let nepaliDay = NepaliCalendar.shared.toNepaliDigits(bsDate.day)
-                let nepaliYear = NepaliCalendar.shared.toNepaliDigits(bsDate.year)
+               let bsDate = BhitteCalendar.shared.convertToBSDate(from: adDate) {
+                let monthName = BhitteCalendar.shared.months[bsDate.month - 1]
+                let nepaliDay = BhitteCalendar.shared.toNepaliDigits(bsDate.day)
+                let nepaliYear = BhitteCalendar.shared.toNepaliDigits(bsDate.year)
                 return "The BS equivalent of **\(year)-\(month)-\(day) AD** is **\(monthName) \(nepaliDay), \(nepaliYear)** [DATE:\(bsDate.year):\(bsDate.month):\(bsDate.day)]."
             }
         }
@@ -721,12 +841,12 @@ class AIResponseGenerator {
     }
 
     private func findNextNoteMatch(matching input: String) -> (name: String, date: BSDate)? {
-        let today = NepaliCalendar.shared.convertToBSDate(from: Date())!
+        let today = BhitteCalendar.shared.convertToBSDate(from: Date())!
         let notes = PatroNoteManager.shared.notes
         
         // Search for the next 365 days
         for i in 0...365 {
-            if let date = NepaliCalendar.shared.addDays(to: today, days: i) {
+            if let date = BhitteCalendar.shared.addDays(to: today, days: i) {
                 let dateKey = "\(date.year)-\(String(format: "%02d", date.month))-\(String(format: "%02d", date.day))"
                 if let noteContent = notes[dateKey], !noteContent.isEmpty {
                     let noteContentLower = noteContent.lowercased()

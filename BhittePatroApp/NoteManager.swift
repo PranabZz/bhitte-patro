@@ -22,15 +22,20 @@ class PatroNoteManager: ObservableObject {
 
     private func openDatabase() {
         let fileManager = FileManager.default
-        guard let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return }
+        let appGroupIdentifier = "group.com.pranab.BhittePatro"
+        guard let containerURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else { 
+            // Fallback if app group not available
+            guard let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return }
+            let dbURL = appSupportURL.appendingPathComponent("bhitte_patro_notes.sqlite")
+            try? fileManager.createDirectory(at: appSupportURL, withIntermediateDirectories: true)
+            if sqlite3_open(dbURL.path, &db) != SQLITE_OK { print("Error opening database") }
+            return
+        }
         
-        let dbURL = appSupportURL.appendingPathComponent("bhitte_patro_notes.sqlite")
-        
-        // Ensure directory exists
-        try? fileManager.createDirectory(at: appSupportURL, withIntermediateDirectories: true)
+        let dbURL = containerURL.appendingPathComponent("bhitte_patro_notes.sqlite")
         
         if sqlite3_open(dbURL.path, &db) != SQLITE_OK {
-            print("Error opening database")
+            print("Error opening database at app group container")
         }
     }
 

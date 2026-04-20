@@ -6,7 +6,5 @@
 	<array>
 		<string>group.com.pranab.BhittePatro</string>
 	</array>
-	<key>com.apple.security.network.client</key>
-	<true/>
 </dict>
 </plist>

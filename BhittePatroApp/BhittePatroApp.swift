@@ -28,8 +28,8 @@ struct CalendarData: Codable {
 
 
 
-class NepaliCalendar: ObservableObject {
-    static let shared = NepaliCalendar()
+class BhitteCalendar: ObservableObject {
+    static let shared = BhitteCalendar()
 
     let nepaliNumbers = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"]
     let weekDays = ["आइत", "सोम", "मंगल", "बुध", "बिही", "शुक्र", "शनि"]
@@ -315,14 +315,12 @@ class DateUpdater: ObservableObject {
 
 // Persistable modes with raw values for UserDefaults
 enum CalendarViewMode: String, CaseIterable {
-    case today
     case calendar
     case settings
     case ai
     
     var icon: String {
         switch self {
-        case .today: return "sun.max"
         case .calendar: return "calendar"
         case .settings: return "gearshape"
         case .ai: return "sparkle"
@@ -331,7 +329,6 @@ enum CalendarViewMode: String, CaseIterable {
     
     var title: String {
         switch self {
-        case .today: return "Today"
         case .calendar: return "Calendar"
         case .settings: return "Settings"
         case .ai: return "AI Chat"
@@ -373,8 +370,8 @@ struct BhittePatroApp: App {
         } label: {
             HStack {
                 Image(systemName: "calendar")
-                if let today = NepaliCalendar.shared.convertToBSDate(from: dateUpdater.currentDate) {
-                    Text(NepaliCalendar.shared.toNepaliDigits(today.day))
+                if let today = BhitteCalendar.shared.convertToBSDate(from: dateUpdater.currentDate) {
+                    Text(BhitteCalendar.shared.toNepaliDigits(today.day))
                 }
             }
         }
@@ -438,7 +435,7 @@ struct VCenterView: View {
     @State private var selectedDate: BSDate?
     @State private var today: BSDate?
     @State private var adDate = Date()
-    @State private var bsDate = NepaliCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
+    @State private var bsDate = BhitteCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
     @State private var viewMode: CalendarViewMode
     @State private var previousMode: CalendarViewMode = .calendar
     @State private var selectionTimer: Timer? = nil
@@ -449,7 +446,7 @@ struct VCenterView: View {
     }
     
     init() {
-        let bsNow = NepaliCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
+        let bsNow = BhitteCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
         _displayYear = State(initialValue: bsNow.year)
         _displayMonth = State(initialValue: bsNow.month)
         _today = State(initialValue: bsNow)
@@ -467,8 +464,6 @@ struct VCenterView: View {
             switch viewMode {
                 case .calendar:
                     CalendarView(displayYear: $displayYear, displayMonth: $displayMonth, selectedDate: $selectedDate, today: $today, adDate: $adDate, bsDate: $bsDate, viewMode: $viewMode, isAISelection: $isAISelection)
-                case .today:
-                    TodayView(currentDate: dateUpdater.currentDate, viewMode: $viewMode)
                 case .settings:
                     SettingsView(onBack: {
                         withAnimation(.easeInOut(duration: 0.2)) {
@@ -483,7 +478,7 @@ struct VCenterView: View {
                     }
             }
         }
-        .frame(width: viewMode == .today ? 210 : viewMode == .settings ? 390 : viewMode == .ai ? 370 : 330, height: viewMode == .today ? 220 : viewMode == .settings ? 520 : 470)
+        .frame(width: viewMode == .settings ? 390 : viewMode == .ai ? 370 : 330, height: viewMode == .settings ? 520 : 470)
         .animation(.easeInOut(duration: 0.2), value: viewMode)
         .onReceive(NotificationCenter.default.publisher(for: .didChangeDefaultViewMode)) { notification in
             if let mode = notification.userInfo?["mode"] as? String {
@@ -530,7 +525,7 @@ struct VCenterView: View {
         }
         .onAppear {
             adDate = dateUpdater.currentDate
-            if let bsToday = NepaliCalendar.shared.convertToBSDate(from: dateUpdater.currentDate) {
+            if let bsToday = BhitteCalendar.shared.convertToBSDate(from: dateUpdater.currentDate) {
                 bsDate = bsToday
                 today = bsToday
                 if selectedDate == nil {
@@ -541,7 +536,7 @@ struct VCenterView: View {
         .onReceive(dateUpdater.$currentDate) { newDate in
             let oldToday = self.today
             adDate = newDate
-            if let newBsToday = NepaliCalendar.shared.convertToBSDate(from: newDate) {
+            if let newBsToday = BhitteCalendar.shared.convertToBSDate(from: newDate) {
                 // Update today and bsDate first
                 self.today = newBsToday
                 self.bsDate = newBsToday
@@ -566,7 +561,7 @@ struct VCenterView: View {
         if m < 1 { m = 12; y -= 1 }
         else if m > 12 { m = 1; y += 1 }
         guard y >= 2060 && y <= 2085 else { return }
-        if NepaliCalendar.shared.daysInMonth(year: y, month: m) > 0 {
+        if BhitteCalendar.shared.daysInMonth(year: y, month: m) > 0 {
             displayMonth = m; displayYear = y
             // keep selection within new month if possible
             if let sel = selectedDate, sel.year == y, sel.month == m {
@@ -580,14 +575,14 @@ struct VCenterView: View {
     }
     
     private func otherModes(for current: CalendarViewMode) -> [CalendarViewMode] {
-        // We only show functional modes in the footer (Today, Calendar).
+        // We only show functional modes in the footer (Calendar).
         // Settings is now a standalone button on the left.
         
         let primary = primaryMode
         
         if current == primary {
-            // If in primary mode (Today or Calendar), show the other one
-            return primary == .today ? [.calendar] : [.today]
+            // No other modes to show in footer currently besides primary
+            return []
         } else {
             // In settings or other, show the primary
             return [primary]

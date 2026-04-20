@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import WidgetKit
 
 class CalendarManager: ObservableObject {
     static let shared = CalendarManager()
@@ -14,6 +15,7 @@ class CalendarManager: ObservableObject {
     private let calendarURL = URL(string: "https://calendar.pranabkca321.workers.dev/calendar.json")!
     private let lastUpdatedKey = "CalendarLastUpdated"
     private let localFileName = "calendar.json"
+    private let appGroupIdentifier = "group.com.pranab.BhittePatro"
     
     @Published var lastUpdated: Date? {
         didSet {
@@ -40,7 +42,16 @@ class CalendarManager: ObservableObject {
         return appSupportDir.appendingPathComponent(localFileName)
     }
     
+    var sharedFileURL: URL? {
+        let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier)
+        return containerURL?.appendingPathComponent(localFileName)
+    }
+    
     func getLocalCalendarData() -> Data? {
+        // Prefer shared file if it exists
+        if let sharedURL = sharedFileURL, FileManager.default.fileExists(atPath: sharedURL.path) {
+            return try? Data(contentsOf: sharedURL)
+        }
         if FileManager.default.fileExists(atPath: localFileURL.path) {
             return try? Data(contentsOf: localFileURL)
         }
@@ -63,14 +74,21 @@ class CalendarManager: ObservableObject {
             // Validate JSON
             _ = try JSONDecoder().decode(CalendarData.self, from: data)
             
-            // Save to local file
+            // Save to shared container
+            if let sharedURL = sharedFileURL {
+                try data.write(to: sharedURL)
+            }
+            
+            // Also save to local file as backup
             try data.write(to: localFileURL)
             
             await MainActor.run {
                 self.lastUpdated = Date()
                 self.isUpdating = false
-                // Notify NepaliCalendar to reload
-                NepaliCalendar.shared.loadCalendarData()
+                // Notify BhitteCalendar to reload
+                BhitteCalendar.shared.loadCalendarData()
+                // Reload Widget
+                WidgetCenter.shared.reloadAllTimelines()
             }
         } catch {
             await MainActor.run {

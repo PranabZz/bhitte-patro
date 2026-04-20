@@ -12,7 +12,7 @@ struct NoteEditorView: View {
     }
     
     private var displayDate: String {
-        "\(NepaliCalendar.shared.months[date.month - 1]) \(NepaliCalendar.shared.toNepaliDigits(date.day))"
+        "\(BhitteCalendar.shared.months[date.month - 1]) \(BhitteCalendar.shared.toNepaliDigits(date.day))"
     }
     
     init(date: BSDate, noteManager: PatroNoteManager, onDismiss: @escaping () -> Void) {
@@ -28,7 +28,7 @@ struct NoteEditorView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(displayDate)
                         .font(.system(size: 20, weight: .bold, design: .rounded))
-                    Text(NepaliCalendar.shared.toNepaliDigits(date.year))
+                    Text(BhitteCalendar.shared.toNepaliDigits(date.year))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                 }

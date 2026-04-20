@@ -42,15 +42,15 @@ struct DateConversionView: View {
 
             // ── BS Date (Hero) ───────────────────────────────────────────
             VStack(spacing: 4) {
-                Text(NepaliCalendar.shared.months[bsDate.month - 1])
+                Text(BhitteCalendar.shared.months[bsDate.month - 1])
                     .font(.system(.title3, design: .rounded).weight(.medium))
                     .foregroundStyle(.secondary)
 
-                Text(NepaliCalendar.shared.toNepaliDigits(bsDate.year))
+                Text(BhitteCalendar.shared.toNepaliDigits(bsDate.year))
                     .font(.system(size: 64, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
 
-                Text(NepaliCalendar.shared.toNepaliDigits(bsDate.day))
+                Text(BhitteCalendar.shared.toNepaliDigits(bsDate.day))
                     .font(.system(.title, design: .rounded).weight(.semibold))
                     .foregroundStyle(.secondary)
             }
@@ -122,7 +122,7 @@ struct DateConversionView: View {
 
         guard let date = calendar.date(from: comps) else { return }
         adDate = date
-        if let bs = NepaliCalendar.shared.convertToBSDate(from: date) {
+        if let bs = BhitteCalendar.shared.convertToBSDate(from: date) {
             bsDate = bs
         }
     }

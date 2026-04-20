@@ -92,10 +92,13 @@ struct ChatBubble: View {
     let message: ChatMessage
     
     var body: some View {
-        VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
+        HStack(spacing: 0) {
+            if message.isUser { Spacer(minLength: 60) }
+            
             MessageContentView(text: message.text, isUser: message.isUser)
+            
+            if !message.isUser { Spacer(minLength: 60) }
         }
-        .frame(maxWidth: .infinity, alignment: message.isUser ? .trailing : .leading)
         .padding(.horizontal, 12)
     }
 }
@@ -120,7 +123,7 @@ struct MessageContentView: View {
                 Text(parseMarkdown(textContent))
                     .font(.system(size: 13))
                     .foregroundStyle(isUser ? .white : .primary)
-                    .multilineTextAlignment(isUser ? .trailing : .leading)
+                    .multilineTextAlignment(isUser ? .leading : .leading) // Text content usually looks better left-aligned even in bubbles
                     .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -143,7 +146,6 @@ struct MessageContentView: View {
                 }
             }
         }
-        .frame(minWidth: 20, maxWidth: 280, alignment: isUser ? .trailing : .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
@@ -157,6 +159,7 @@ struct MessageContentView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(isUser ? .clear : Color.secondary.opacity(0.1), lineWidth: 0.5)
         )
+        .frame(maxWidth: 280, alignment: isUser ? .trailing : .leading)
     }
     
     private func parseMarkdown(_ input: String) -> AttributedString {
@@ -213,25 +216,25 @@ struct DateRectangleView: View {
     let date: BSDate
     
     private var isHoliday: Bool {
-        NepaliCalendar.shared.holidayText(year: date.year, month: date.month, day: date.day) != nil ||
+        BhitteCalendar.shared.holidayText(year: date.year, month: date.month, day: date.day) != nil ||
         isSaturday
     }
     
     private var isSaturday: Bool {
-        guard let ad = NepaliCalendar.shared.convertToADDate(from: date) else { return false }
+        guard let ad = BhitteCalendar.shared.convertToADDate(from: date) else { return false }
         return Calendar.current.component(.weekday, from: ad) == 7
     }
     
     private var monthName: String {
-        NepaliCalendar.shared.months[date.month - 1]
+        BhitteCalendar.shared.months[date.month - 1]
     }
     
     private var nepaliDay: String {
-        NepaliCalendar.shared.toNepaliDigits(date.day)
+        BhitteCalendar.shared.toNepaliDigits(date.day)
     }
     
     private var englishDay: String {
-        guard let ad = NepaliCalendar.shared.convertToADDate(from: date) else {
+        guard let ad = BhitteCalendar.shared.convertToADDate(from: date) else {
             return ""
         }
         let calendarDay = Calendar(identifier: .gregorian).component(.day, from: ad)

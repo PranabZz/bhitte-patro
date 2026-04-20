@@ -47,34 +47,6 @@ struct SettingsView: View {
                     .padding(12)
                     .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                     
-                    // Default view section
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Default View")
-                            .font(.system(size: 12, weight: .semibold))
-                        
-                        HStack {
-                            Text("Default View")
-                                .font(.system(size: 12))
-                            Spacer()
-                            Picker("", selection: $defaultMode) {
-                                Text("Today").tag("today")
-                                Text("Calendar").tag("calendar")
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-                            .frame(width: 180)
-                            .onChange(of: defaultMode) { _, new in
-                                NotificationCenter.default.post(
-                                    name: .didChangeDefaultViewMode,
-                                    object: nil,
-                                    userInfo: ["mode": new]
-                                )
-                            }
-                        }
-                    }
-                    .padding(12)
-                    .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-                    
                     // Calendar Update section
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Calendar Data")

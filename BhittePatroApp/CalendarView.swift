@@ -28,19 +28,19 @@ struct CalendarView: View {
   @State private var monthTransitionPhase: Double = 0
 
   private var displayMonthName: String {
-    NepaliCalendar.shared.months[displayMonth - 1]
+    BhitteCalendar.shared.months[displayMonth - 1]
   }
 
   private var displayYearText: String {
-    NepaliCalendar.shared.toNepaliDigits(displayYear)
+    BhitteCalendar.shared.toNepaliDigits(displayYear)
   }
 
   private var englishMonthLabel: String? {
-    let daysInMonth = NepaliCalendar.shared.daysInMonth(year: displayYear, month: displayMonth)
+    let daysInMonth = BhitteCalendar.shared.daysInMonth(year: displayYear, month: displayMonth)
     guard
-      let startDate = NepaliCalendar.shared.convertToADDate(
+      let startDate = BhitteCalendar.shared.convertToADDate(
         from: BSDate(year: displayYear, month: displayMonth, day: 1)),
-      let endDate = NepaliCalendar.shared.convertToADDate(
+      let endDate = BhitteCalendar.shared.convertToADDate(
         from: BSDate(year: displayYear, month: displayMonth, day: daysInMonth))
     else {
       return nil
@@ -118,7 +118,7 @@ struct CalendarView: View {
         Menu {
           ForEach(1...12, id: \.self) { month in
             Button(action: { displayMonth = month }) {
-              Text(NepaliCalendar.shared.months[month - 1])
+              Text(BhitteCalendar.shared.months[month - 1])
             }
           }
         } label: {
@@ -131,7 +131,7 @@ struct CalendarView: View {
         Menu {
           ForEach(2060...2085, id: \.self) { year in
             Button(action: { displayYear = year }) {
-              Text(NepaliCalendar.shared.toNepaliDigits(year))
+              Text(BhitteCalendar.shared.toNepaliDigits(year))
             }
           }
         } label: {
@@ -199,7 +199,7 @@ struct CalendarView: View {
   // MARK: - Weekday Section
   private var weekdaySection: some View {
     HStack(spacing: 0) {
-      ForEach(NepaliCalendar.shared.weekDays, id: \.self) { day in
+      ForEach(BhitteCalendar.shared.weekDays, id: \.self) { day in
         Text(day)
           .font(.system(size: 12, weight: .bold))
           .foregroundColor(day == "शनि" ? .red : .secondary)
@@ -211,8 +211,8 @@ struct CalendarView: View {
 
   // MARK: - Calendar Grid Section
   private var calendarGridSection: some View {
-    let firstWeekday = NepaliCalendar.shared.firstWeekday(year: displayYear, month: displayMonth)
-    let daysInMonth = NepaliCalendar.shared.daysInMonth(year: displayYear, month: displayMonth)
+    let firstWeekday = BhitteCalendar.shared.firstWeekday(year: displayYear, month: displayMonth)
+    let daysInMonth = BhitteCalendar.shared.daysInMonth(year: displayYear, month: displayMonth)
     let cells = buildCells(firstWeekday: firstWeekday, daysInMonth: daysInMonth)
     let cellHeight = CGFloat(45)
 
@@ -237,12 +237,18 @@ struct CalendarView: View {
             isAISelection: isAISelection
           )
           .contentShape(Rectangle())
-          .onTapGesture { handleCellTap(cell: cell) }
+          .onTapGesture { 
+            if !cell.isEmpty {
+              handleCellTap(cell: cell) 
+            }
+          }
           .popover(
             item: Binding(
               get: {
-                popoverDate == BSDate(year: cell.bsYear, month: cell.bsMonth, day: cell.bsDay)
-                  ? cell.toBSDate() : nil
+                if !cell.isEmpty && popoverDate == BSDate(year: cell.bsYear, month: cell.bsMonth, day: cell.bsDay) {
+                  return cell.toBSDate()
+                }
+                return nil
               },
               set: { if $0 == nil { popoverDate = nil } }
             )
@@ -270,17 +276,17 @@ struct CalendarView: View {
         if let sel = selectedDate {
           let isToday =
             today?.year == sel.year && today?.month == sel.month && today?.day == sel.day
-          let holiday = NepaliCalendar.shared.holidayText(
+          let holiday = BhitteCalendar.shared.holidayText(
             year: sel.year, month: sel.month, day: sel.day)
           let upcoming =
             isToday
-            ? NepaliCalendar.shared.nextHoliday(from: sel.year, month: sel.month, day: sel.day)
+            ? BhitteCalendar.shared.nextHoliday(from: sel.year, month: sel.month, day: sel.day)
             : nil
 
           VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 4) {
               Text(
-                "\(NepaliCalendar.shared.months[sel.month - 1]) \(NepaliCalendar.shared.toNepaliDigits(sel.day))"
+                "\(BhitteCalendar.shared.months[sel.month - 1]) \(BhitteCalendar.shared.toNepaliDigits(sel.day))"
               )
               .font(.system(size: 10, weight: .bold))
                 
@@ -298,7 +304,7 @@ struct CalendarView: View {
                   .foregroundStyle(.red)
               } else if let upcomingHoliday = upcoming {
                 HStack(spacing: 4) {
-                  Text("\(NepaliCalendar.shared.toNepaliDigits(upcomingHoliday.daysAway)) दिन मा")
+                  Text("\(BhitteCalendar.shared.toNepaliDigits(upcomingHoliday.daysAway)) दिन मा")
                     .foregroundStyle(.white)
                   Text(upcomingHoliday.text)
                     .foregroundStyle(.red)
@@ -380,26 +386,25 @@ struct CalendarView: View {
   private func buildCells(firstWeekday: Int, daysInMonth: Int) -> [CellModel] {
     let prevMonth = displayMonth == 1 ? 12 : displayMonth - 1
     let prevYear = displayMonth == 1 ? displayYear - 1 : displayYear
-    let daysInPrevMonth = NepaliCalendar.shared.daysInMonth(year: prevYear, month: prevMonth)
+    let daysInPrevMonth = BhitteCalendar.shared.daysInMonth(year: prevYear, month: prevMonth)
 
     let nextMonth = displayMonth == 12 ? 1 : displayMonth + 1
     let nextYear = displayMonth == 12 ? displayYear + 1 : displayYear
 
     var result: [CellModel] = []
 
-    // Previous month days
+    // Previous month days (empty padding)
     for i in 0..<firstWeekday {
       let day = daysInPrevMonth - (firstWeekday - 1) + i
-      let nepaliDay = NepaliCalendar.shared.toNepaliDigits(day)
-      let englishDay = getEnglishDay(year: prevYear, month: prevMonth, day: day)
       result.append(
         CellModel(
           bsYear: prevYear, bsMonth: prevMonth, bsDay: day,
           isCurrent: false,
           isToday: false,
           isHoliday: false,
-          englishDay: englishDay,
-          nepaliDay: nepaliDay
+          englishDay: "",
+          nepaliDay: "",
+          isEmpty: true
         ))
     }
 
@@ -407,8 +412,8 @@ struct CalendarView: View {
     for day in 1...daysInMonth {
       let isToday = today?.day == day && today?.month == displayMonth && today?.year == displayYear
       let isHoliday =
-        NepaliCalendar.shared.holidayText(year: displayYear, month: displayMonth, day: day) != nil
-      let nepaliDay = NepaliCalendar.shared.toNepaliDigits(day)
+        BhitteCalendar.shared.holidayText(year: displayYear, month: displayMonth, day: day) != nil
+      let nepaliDay = BhitteCalendar.shared.toNepaliDigits(day)
       let englishDay = getEnglishDay(year: displayYear, month: displayMonth, day: day)
       result.append(
         CellModel(
@@ -417,23 +422,23 @@ struct CalendarView: View {
           isToday: isToday,
           isHoliday: isHoliday,
           englishDay: englishDay,
-          nepaliDay: nepaliDay
+          nepaliDay: nepaliDay,
+          isEmpty: false
         ))
     }
 
-    // Next month days - fill remaining to always have 42 cells (6 rows x 7 days)
+    // Next month days (empty padding)
     let remainingCells = 42 - result.count
     for day in 1...remainingCells {
-      let nepaliDay = NepaliCalendar.shared.toNepaliDigits(day)
-      let englishDay = getEnglishDay(year: nextYear, month: nextMonth, day: day)
       result.append(
         CellModel(
           bsYear: nextYear, bsMonth: nextMonth, bsDay: day,
           isCurrent: false,
           isToday: false,
           isHoliday: false,
-          englishDay: englishDay,
-          nepaliDay: nepaliDay
+          englishDay: "",
+          nepaliDay: "",
+          isEmpty: true
         ))
     }
 
@@ -442,7 +447,7 @@ struct CalendarView: View {
 
   private func getEnglishDay(year: Int, month: Int, day: Int) -> String {
     guard
-      let ad = NepaliCalendar.shared.convertToADDate(
+      let ad = BhitteCalendar.shared.convertToADDate(
         from: BSDate(year: year, month: month, day: day))
     else {
       return ""
@@ -467,7 +472,7 @@ struct PopoverContentView: View {
           .foregroundStyle(.secondary)
 
         Text(
-          NepaliCalendar.shared.tithiText(year: date.year, month: date.month, day: date.day) ?? "-"
+          BhitteCalendar.shared.tithiText(year: date.year, month: date.month, day: date.day) ?? "-"
         )
         .font(.system(size: 12, weight: .semibold))
       }
@@ -519,6 +524,7 @@ private struct CellModel: Equatable {
   let isHoliday: Bool
   let englishDay: String
   let nepaliDay: String
+  var isEmpty: Bool = false
 
   func toBSDate() -> BSDate {
     BSDate(year: bsYear, month: bsMonth, day: bsDay)
@@ -527,7 +533,7 @@ private struct CellModel: Equatable {
   static func == (lhs: CellModel, rhs: CellModel) -> Bool {
     return lhs.bsYear == rhs.bsYear && lhs.bsMonth == rhs.bsMonth && lhs.bsDay == rhs.bsDay
       && lhs.isCurrent == rhs.isCurrent && lhs.isToday == rhs.isToday
-      && lhs.isHoliday == rhs.isHoliday
+      && lhs.isHoliday == rhs.isHoliday && lhs.isEmpty == rhs.isEmpty
   }
 }
 
@@ -563,68 +569,70 @@ private struct CalendarCellView: View {
     let animationDelay = Double(index) * 0.003
 
     ZStack {
-      // Background - today is red, AI selection is blue, manual selection is light gray
-      if cell.isToday {
-        RoundedRectangle(cornerRadius: cellCornerRadius)
-          .fill(Color.red)
-      } else if isSelected && isAISelection {
-        RoundedRectangle(cornerRadius: cellCornerRadius)
-          .fill(Color.blue)
-      } else if isSelected {
-        RoundedRectangle(cornerRadius: cellCornerRadius)
-          .fill(Color.secondary.opacity(0.15))
-      } else {
-        RoundedRectangle(cornerRadius: cellCornerRadius)
-          .fill(Color.secondary.opacity(0.15))
-          .opacity(0) // Hide background for non-selected cells
-      }
-
-      // Note indicator
-      if hasNote {
-        VStack {
-          HStack {
-            Spacer()
-            Image(systemName: "doc.text")
-              .font(.system(size: 7))
-              .foregroundStyle((cell.isToday || (isSelected && isAISelection)) ? .white : .secondary)
-              .padding(4)
-          }
-          Spacer()
+      if !cell.isEmpty {
+        // Background - today is red, AI selection is blue, manual selection is light gray
+        if cell.isToday {
+          RoundedRectangle(cornerRadius: cellCornerRadius)
+            .fill(Color.red)
+        } else if isSelected && isAISelection {
+          RoundedRectangle(cornerRadius: cellCornerRadius)
+            .fill(Color.blue)
+        } else if isSelected {
+          RoundedRectangle(cornerRadius: cellCornerRadius)
+            .fill(Color.secondary.opacity(0.15))
+        } else {
+          RoundedRectangle(cornerRadius: cellCornerRadius)
+            .fill(Color.secondary.opacity(0.15))
+            .opacity(0) // Hide background for non-selected cells
         }
-      }
 
-      // Content
-      VStack(spacing: 0) {
-        Spacer(minLength: 0)
+        // Note indicator
+        if hasNote {
+          VStack {
+            HStack {
+              Spacer()
+              Image(systemName: "doc.text")
+                .font(.system(size: 7))
+                .foregroundStyle((cell.isToday || (isSelected && isAISelection)) ? .white : .secondary)
+                .padding(4)
+            }
+            Spacer()
+          }
+        }
 
-        // Nepali day number
-        Text(cell.nepaliDay)
-          .font(.system(size: 18, weight: (cell.isToday || (isSelected && isAISelection)) ? .semibold : .regular, design: .rounded))
-          .foregroundStyle(
-            (cell.isToday || (isSelected && isAISelection))
-              ? Color.white
-              : (cell.isCurrent && cell.isHoliday)
-                ? Color.red
-                : (cell.isCurrent && index % 7 == 6)
-                  ? Color.red
-                  : (cell.isCurrent ? Color.primary : Color.gray.opacity(0.5))
-          )
-
-        Spacer(minLength: 0)
-
-        // English day number
-        HStack {
+        // Content
+        VStack(spacing: 0) {
           Spacer(minLength: 0)
-          if !cell.englishDay.isEmpty {
-            Text(cell.englishDay)
-              .font(.system(size: 10, weight: .semibold, design: .rounded))
-              .foregroundStyle(
-                (cell.isToday || (isSelected && isAISelection))
-                  ? Color.white.opacity(0.9)
-                  : (cell.isCurrent ? Color.secondary : Color.gray.opacity(0.4))
-              )
-              .padding(.trailing, 3)
-              .padding(.bottom, 2)
+
+          // Nepali day number
+          Text(cell.nepaliDay)
+            .font(.system(size: 18, weight: (cell.isToday || (isSelected && isAISelection)) ? .semibold : .regular, design: .rounded))
+            .foregroundStyle(
+              (cell.isToday || (isSelected && isAISelection))
+                ? Color.white
+                : (cell.isCurrent && cell.isHoliday)
+                  ? Color.red
+                  : (cell.isCurrent && index % 7 == 6)
+                    ? Color.red
+                    : (cell.isCurrent ? Color.primary : Color.gray.opacity(0.5))
+            )
+
+          Spacer(minLength: 0)
+
+          // English day number
+          HStack {
+            Spacer(minLength: 0)
+            if !cell.englishDay.isEmpty {
+              Text(cell.englishDay)
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundStyle(
+                  (cell.isToday || (isSelected && isAISelection))
+                    ? Color.white.opacity(0.9)
+                    : (cell.isCurrent ? Color.secondary : Color.gray.opacity(0.4))
+                )
+                .padding(.trailing, 3)
+                .padding(.bottom, 2)
+            }
           }
         }
       }
