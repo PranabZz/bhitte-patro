@@ -1,0 +1,60 @@
+{
+  "calendar_info": {
+    "name": "Bikram Sambat (BS)",
+    "description": "Bikram Sambat is the official national calendar of Nepal. It is a lunisolar calendar that is approximately 56 years and 8 months ahead of the Gregorian calendar (AD).",
+    "history": "Named after the legendary King Vikramaditya, the calendar was established in 57 BC to commemorate his victory over the Sakas. It was formally adopted as Nepal's official civil calendar in 1901 CE (1958 BS) during the Rana regime under Prime Minister Chandra Shumsher.",
+    "why_it_exists": "The calendar accurately tracks lunar phases and solar positions based on the ancient 'Surya Siddhanta', essential for determining Hindu and Buddhist festivals. It is a symbol of Nepal's unique cultural heritage and sovereignty.",
+    "new_year": "The Nepali New Year (Navavarsha) falls on the 1st of Baisakh, typically around April 13th or 14th."
+  },
+  "tithi_info": {
+    "definition": "A Tithi is a lunar day in the Nepali calendar, defined by the 12-degree increase in the longitudinal angle between the Moon and the Sun. Unlike solar days, Tithis vary in length (19 to 26 hours).",
+    "phases": {
+      "shukla_paksha": "The Bright Fortnight (waxing phase), ending on the Full Moon (Purnima). Considered auspicious for celebrations.",
+      "krishna_paksha": "The Dark Fortnight (waning phase), ending on the New Moon (Aunsi). Associated with ancestral rituals and introspection."
+    },
+    "significance": "Tithis determine the dates of all major Nepali festivals, religious rituals (Sanskars like Nwaran and weddings), fasting (Vratas like Ekadashi), and ancestral rites (Shraddha).",
+    "names": ["Pratipada (Parewa)", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shasthi", "Saptami", "Ashtami", "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Purnima/Aunsi"]
+  },
+  "holidays": [
+    {
+      "name": "Dashain",
+      "significance": "The longest and most important festival in Nepal, symbolizing the victory of good over evil (Goddess Durga over Mahishasura and Lord Ram over Ravana).",
+      "traditions": "Receiving Tika and Jamara from elders, flying kites, and bamboo swings (Ping)."
+    },
+    {
+      "name": "Tihar",
+      "significance": "Festival of Lights celebrating the bond between humans, animals (crows, dogs, cows, oxen), and siblings (Bhai Tika).",
+      "traditions": "Oil lamps (Diyo), Rangoli, and worship of Laxmi (Goddess of Wealth)."
+    },
+    {
+      "name": "Holi",
+      "significance": "Festival of Colors marking the arrival of spring and the victory of Prahlad over Holika.",
+      "traditions": "Playing with colored powder and water, music, and dancing."
+    },
+    {
+      "name": "Mahashivaratri",
+      "significance": "The Night of Shiva, dedicated to overcoming darkness and ignorance.",
+      "traditions": "Vigil at Pashupatinath Temple, fasting, and sacred fires."
+    },
+    {
+      "name": "Buddha Jayanti",
+      "significance": "Celebrates the birth, enlightenment, and death of Gautama Buddha.",
+      "traditions": "Pilgrimage to Lumbini, lighting butter lamps at Boudhanath and Swayambhunath."
+    },
+    {
+      "name": "Chhath",
+      "significance": "Dedicated to the Sun God (Surya) and Chhathi Maiya, primarily in the Terai region.",
+      "traditions": "Prayers at riverbanks during sunset and sunrise."
+    },
+    {
+      "name": "Lhosar",
+      "significance": "Tibetan/Ethnic New Year celebrated by Tamang, Gurung, and Sherpa communities.",
+      "traditions": "Ritual dances, feasts (Guthuk), and prayer flags."
+    },
+    {
+      "name": "Janai Purnima",
+      "significance": "Sacred Thread Festival and Raksha Bandhan.",
+      "traditions": "Changing the Janai (sacred thread) and tying protective cords around the wrist."
+    }
+  ]
+}

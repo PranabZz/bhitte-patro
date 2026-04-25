@@ -11,10 +11,12 @@ import Foundation
 
 
 // MARK: - Models
-struct BSDate: Equatable {
+struct BSDate: Equatable, Hashable, Identifiable {
     var year: Int
     var month: Int
     var day: Int
+    
+    var id: String { "\(year)-\(month)-\(day)" }
 }
 
 // MARK: - Calendar Engine
@@ -26,8 +28,8 @@ struct CalendarData: Codable {
 
 
 
-class NepaliCalendar: ObservableObject {
-    static let shared = NepaliCalendar()
+class BhitteCalendar: ObservableObject {
+    static let shared = BhitteCalendar()
 
     let nepaliNumbers = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"]
     let weekDays = ["आइत", "सोम", "मंगल", "बुध", "बिही", "शुक्र", "शनि"]
@@ -68,7 +70,7 @@ class NepaliCalendar: ObservableObject {
         return nil
     }
     
-    private func addDays(to date: BSDate, days: Int) -> BSDate? {
+    func addDays(to date: BSDate, days: Int) -> BSDate? {
         var y = date.year
         var m = date.month
         var d = date.day + days
@@ -258,6 +260,41 @@ class NepaliCalendar: ObservableObject {
         nepaliNumberCacheLock.withLock { nepaliNumberCache[number] = result }
         return result
     }
+    
+    func findNextHoliday(matching synonyms: [String]?) -> (name: String, date: BSDate)? {
+        guard let today = convertToBSDate(from: Date()) else { return nil }
+        
+        for i in 0...365 {
+            if let date = addDays(to: today, days: i) {
+                if let holidayNames = holidays[date.year]?[date.month]?[date.day], !holidayNames.isEmpty {
+                    let mainHoliday = holidayNames[0]
+                    
+                    if let synonyms = synonyms, !synonyms.isEmpty {
+                        for synonym in synonyms {
+                            if mainHoliday.caseInsensitiveCompare(synonym) == .orderedSame {
+                                return (mainHoliday, date)
+                            }
+                        }
+                    } else { // Generic search
+                        return (mainHoliday, date)
+                    }
+                }
+            }
+        }
+        return nil
+    }
+
+    func daysBetween(from: BSDate, to: BSDate) -> Int? {
+        guard let fromAD = convertToADDate(from: from), let toAD = convertToADDate(from: to) else {
+            return nil
+        }
+        let calendar = Calendar(identifier: .gregorian)
+        let fromDate = calendar.startOfDay(for: fromAD)
+        let toDate = calendar.startOfDay(for: toAD)
+        
+        let components = calendar.dateComponents([.day], from: fromDate, to: toDate)
+        return components.day
+    }
 }
 
 class DateUpdater: ObservableObject {
@@ -278,23 +315,23 @@ class DateUpdater: ObservableObject {
 
 // Persistable modes with raw values for UserDefaults
 enum CalendarViewMode: String, CaseIterable {
-    case today
     case calendar
     case settings
+    case ai
     
     var icon: String {
         switch self {
-        case .today: return "sun.max"
         case .calendar: return "calendar"
         case .settings: return "gearshape"
+        case .ai: return "sparkle"
         }
     }
     
     var title: String {
         switch self {
-        case .today: return "Today"
         case .calendar: return "Calendar"
         case .settings: return "Settings"
+        case .ai: return "AI Chat"
         }
     }
     
@@ -319,20 +356,22 @@ enum CalendarViewMode: String, CaseIterable {
 @main
 struct BhittePatroApp: App {
     @StateObject private var dateUpdater = DateUpdater()
+    @StateObject private var noteManager = PatroNoteManager.shared
 
     var body: some Scene {
         // Menu bar extra remains your primary UI
         MenuBarExtra {
             VCenterView()
                 .environmentObject(dateUpdater)
+                .environmentObject(noteManager)
                 .onAppear {
                     CalendarManager.shared.checkAndAutoUpdate()
                 }
         } label: {
             HStack {
                 Image(systemName: "calendar")
-                if let today = NepaliCalendar.shared.convertToBSDate(from: dateUpdater.currentDate) {
-                    Text(NepaliCalendar.shared.toNepaliDigits(today.day))
+                if let today = BhitteCalendar.shared.convertToBSDate(from: dateUpdater.currentDate) {
+                    Text(BhitteCalendar.shared.toNepaliDigits(today.day))
                 }
             }
         }
@@ -396,17 +435,18 @@ struct VCenterView: View {
     @State private var selectedDate: BSDate?
     @State private var today: BSDate?
     @State private var adDate = Date()
-    @State private var bsDate = NepaliCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
+    @State private var bsDate = BhitteCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
     @State private var viewMode: CalendarViewMode
     @State private var previousMode: CalendarViewMode = .calendar
     @State private var selectionTimer: Timer? = nil
+    @State private var isAISelection: Bool = false
 
     private var primaryMode: CalendarViewMode {
         CalendarViewMode(rawValue: defaultMode) ?? .calendar
     }
     
     init() {
-        let bsNow = NepaliCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
+        let bsNow = BhitteCalendar.shared.convertToBSDate(from: Date()) ?? BSDate(year: 2081, month: 1, day: 1)
         _displayYear = State(initialValue: bsNow.year)
         _displayMonth = State(initialValue: bsNow.month)
         _today = State(initialValue: bsNow)
@@ -423,18 +463,22 @@ struct VCenterView: View {
             // Main Content
             switch viewMode {
                 case .calendar:
-                    CalendarView(displayYear: $displayYear, displayMonth: $displayMonth, selectedDate: $selectedDate, today: $today, adDate: $adDate, bsDate: $bsDate, viewMode: $viewMode)
-                case .today:
-                    TodayView(currentDate: dateUpdater.currentDate, viewMode: $viewMode)
+                    CalendarView(displayYear: $displayYear, displayMonth: $displayMonth, selectedDate: $selectedDate, today: $today, adDate: $adDate, bsDate: $bsDate, viewMode: $viewMode, isAISelection: $isAISelection)
                 case .settings:
                     SettingsView(onBack: {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             viewMode = primaryMode
                         }
                     })
+                case .ai:
+                    AIChatView {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            viewMode = .calendar
+                        }
+                    }
             }
         }
-        .frame(width: viewMode == .today ? 220 : viewMode == .settings ? 400 : 340, height: viewMode == .today ? 220 : viewMode == .settings ? 520 : 470)
+        .frame(width: viewMode == .settings ? 390 : viewMode == .ai ? 370 : 330, height: viewMode == .settings ? 520 : 470)
         .animation(.easeInOut(duration: 0.2), value: viewMode)
         .onReceive(NotificationCenter.default.publisher(for: .didChangeDefaultViewMode)) { notification in
             if let mode = notification.userInfo?["mode"] as? String {
@@ -444,6 +488,17 @@ struct VCenterView: View {
                     } else if let newMode = CalendarViewMode(rawValue: mode) {
                         viewMode = newMode
                     }
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .didSelectCalendarDate)) { notification in
+            if let date = notification.object as? BSDate {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    viewMode = .calendar
+                    selectedDate = date
+                    displayYear = date.year
+                    displayMonth = date.month
+                    isAISelection = true
                 }
             }
         }
@@ -470,7 +525,7 @@ struct VCenterView: View {
         }
         .onAppear {
             adDate = dateUpdater.currentDate
-            if let bsToday = NepaliCalendar.shared.convertToBSDate(from: dateUpdater.currentDate) {
+            if let bsToday = BhitteCalendar.shared.convertToBSDate(from: dateUpdater.currentDate) {
                 bsDate = bsToday
                 today = bsToday
                 if selectedDate == nil {
@@ -481,7 +536,7 @@ struct VCenterView: View {
         .onReceive(dateUpdater.$currentDate) { newDate in
             let oldToday = self.today
             adDate = newDate
-            if let newBsToday = NepaliCalendar.shared.convertToBSDate(from: newDate) {
+            if let newBsToday = BhitteCalendar.shared.convertToBSDate(from: newDate) {
                 // Update today and bsDate first
                 self.today = newBsToday
                 self.bsDate = newBsToday
@@ -506,7 +561,7 @@ struct VCenterView: View {
         if m < 1 { m = 12; y -= 1 }
         else if m > 12 { m = 1; y += 1 }
         guard y >= 2060 && y <= 2085 else { return }
-        if NepaliCalendar.shared.daysInMonth(year: y, month: m) > 0 {
+        if BhitteCalendar.shared.daysInMonth(year: y, month: m) > 0 {
             displayMonth = m; displayYear = y
             // keep selection within new month if possible
             if let sel = selectedDate, sel.year == y, sel.month == m {
@@ -520,14 +575,14 @@ struct VCenterView: View {
     }
     
     private func otherModes(for current: CalendarViewMode) -> [CalendarViewMode] {
-        // We only show functional modes in the footer (Today, Calendar).
+        // We only show functional modes in the footer (Calendar).
         // Settings is now a standalone button on the left.
         
         let primary = primaryMode
         
         if current == primary {
-            // If in primary mode (Today or Calendar), show the other one
-            return primary == .today ? [.calendar] : [.today]
+            // No other modes to show in footer currently besides primary
+            return []
         } else {
             // In settings or other, show the primary
             return [primary]

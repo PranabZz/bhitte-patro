@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		3BBAE69F2F6E5409003B0464 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3BBAE69E2F6E5409003B0464 /* WidgetKit.framework */; };
 		3BBAE6A12F6E5409003B0464 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3BBAE6A02F6E5409003B0464 /* SwiftUI.framework */; };
-		3BBAE6B02F6E540A003B0464 /* BhittePatroExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3BBAE69C2F6E5409003B0464 /* BhittePatroExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		3BBAE6B02F6E540A003B0464 /* BhittePatroWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3BBAE69C2F6E5409003B0464 /* BhittePatroWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -18,7 +18,7 @@
 			containerPortal = 3BB854902F6313090029AC28 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 3BBAE69B2F6E5409003B0464;
-			remoteInfo = BhittePatroExtension;
+			remoteInfo = BhittePatroWidget;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -29,7 +29,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				3BBAE6B02F6E540A003B0464 /* BhittePatroExtension.appex in Embed Foundation Extensions */,
+				3BBAE6B02F6E540A003B0464 /* BhittePatroWidget.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -38,20 +38,10 @@
 
 /* Begin PBXFileReference section */
 		3BB854982F6313090029AC28 /* BhittePatro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BhittePatro.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		3BBAE69C2F6E5409003B0464 /* BhittePatroExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BhittePatroExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		3BBAE69C2F6E5409003B0464 /* BhittePatroWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BhittePatroWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		3BBAE69E2F6E5409003B0464 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		3BBAE6A02F6E5409003B0464 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		3BBAE6B42F6E540A003B0464 /* Exceptions for "BhittePatro" folder in "BhittePatroExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 3BBAE69B2F6E5409003B0464 /* BhittePatroExtension */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3BB8549A2F6313090029AC28 /* BhittePatroApp */ = {
@@ -59,12 +49,9 @@
 			path = BhittePatroApp;
 			sourceTree = "<group>";
 		};
-		3BBAE6A22F6E5409003B0464 /* BhittePatro */ = {
+		3BBAE6A22F6E5409003B0464 /* BhittePatroWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				3BBAE6B42F6E540A003B0464 /* Exceptions for "BhittePatro" folder in "BhittePatroExtension" target */,
-			);
-			path = BhittePatro;
+			path = BhittePatroWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -93,7 +80,7 @@
 			isa = PBXGroup;
 			children = (
 				3BB8549A2F6313090029AC28 /* BhittePatroApp */,
-				3BBAE6A22F6E5409003B0464 /* BhittePatro */,
+				3BBAE6A22F6E5409003B0464 /* BhittePatroWidget */,
 				3BBAE69D2F6E5409003B0464 /* Frameworks */,
 				3BB854992F6313090029AC28 /* Products */,
 			);
@@ -103,7 +90,7 @@
 			isa = PBXGroup;
 			children = (
 				3BB854982F6313090029AC28 /* BhittePatro.app */,
-				3BBAE69C2F6E5409003B0464 /* BhittePatroExtension.appex */,
+				3BBAE69C2F6E5409003B0464 /* BhittePatroWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -144,9 +131,9 @@
 			productReference = 3BB854982F6313090029AC28 /* BhittePatro.app */;
 			productType = "com.apple.product-type.application";
 		};
-		3BBAE69B2F6E5409003B0464 /* BhittePatroExtension */ = {
+		3BBAE69B2F6E5409003B0464 /* BhittePatroWidget */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3BBAE6B52F6E540A003B0464 /* Build configuration list for PBXNativeTarget "BhittePatroExtension" */;
+			buildConfigurationList = 3BBAE6B52F6E540A003B0464 /* Build configuration list for PBXNativeTarget "BhittePatroWidget" */;
 			buildPhases = (
 				3BBAE6982F6E5409003B0464 /* Sources */,
 				3BBAE6992F6E5409003B0464 /* Frameworks */,
@@ -157,13 +144,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				3BBAE6A22F6E5409003B0464 /* BhittePatro */,
+				3BBAE6A22F6E5409003B0464 /* BhittePatroWidget */,
 			);
-			name = BhittePatroExtension;
+			name = BhittePatroWidget;
 			packageProductDependencies = (
 			);
-			productName = BhittePatroExtension;
-			productReference = 3BBAE69C2F6E5409003B0464 /* BhittePatroExtension.appex */;
+			productName = BhittePatroWidget;
+			productReference = 3BBAE69C2F6E5409003B0464 /* BhittePatroWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -199,7 +186,7 @@
 			projectRoot = "";
 			targets = (
 				3BB854972F6313090029AC28 /* BhittePatro */,
-				3BBAE69B2F6E5409003B0464 /* BhittePatroExtension */,
+				3BBAE69B2F6E5409003B0464 /* BhittePatroWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -241,7 +228,7 @@
 /* Begin PBXTargetDependency section */
 		3BBAE6AF2F6E540A003B0464 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3BBAE69B2F6E5409003B0464 /* BhittePatroExtension */;
+			target = 3BBAE69B2F6E5409003B0464 /* BhittePatroWidget */;
 			targetProxy = 3BBAE6AE2F6E540A003B0464 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -366,9 +353,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = BhittePatroApp/BhittePatroApp.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 46CXWYA9TP;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
@@ -385,10 +374,10 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pranab.BhittePatro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -402,7 +391,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.0;
+				XROS_DEPLOYMENT_TARGET = 1.0;
 			};
 			name = Debug;
 		};
@@ -411,9 +400,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = BhittePatroApp/BhittePatroApp.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 46CXWYA9TP;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
@@ -430,10 +421,10 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pranab.BhittePatro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -447,7 +438,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.0;
+				XROS_DEPLOYMENT_TARGET = 1.0;
 			};
 			name = Release;
 		};
@@ -456,21 +447,24 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = BhittePatroWidget/BhittePatroWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 46CXWYA9TP;
 				ENABLE_APP_SANDBOX = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = BhittePatro/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = BhittePatro;
+				INFOPLIST_FILE = BhittePatroWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Bhitte Patro";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pranab.BhittePatro.BhittePatro;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pranab.BhittePatro.BhittePatroWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -487,21 +481,24 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = BhittePatroWidget/BhittePatroWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 46CXWYA9TP;
 				ENABLE_APP_SANDBOX = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = BhittePatro/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = BhittePatro;
+				INFOPLIST_FILE = BhittePatroWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Bhitte Patro";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pranab.BhittePatro.BhittePatro;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pranab.BhittePatro.BhittePatroWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -534,7 +531,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3BBAE6B52F6E540A003B0464 /* Build configuration list for PBXNativeTarget "BhittePatroExtension" */ = {
+		3BBAE6B52F6E540A003B0464 /* Build configuration list for PBXNativeTarget "BhittePatroWidget" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3BBAE6B22F6E540A003B0464 /* Debug */,
