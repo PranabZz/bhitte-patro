@@ -17,6 +17,17 @@ struct CalendarView: View {
   @Binding var viewMode: CalendarViewMode
   @Binding var isAISelection: Bool
 
+  @AppStorage("CalendarDesign") private var calendarDesign: String = CalendarDesign.classic.rawValue
+  @AppStorage("AppTheme") private var appTheme: String = AppTheme.standard.rawValue
+
+  private var design: CalendarDesign {
+      CalendarDesign(rawValue: calendarDesign) ?? .classic
+  }
+  
+  private var currentTheme: AppTheme {
+      AppTheme(rawValue: appTheme) ?? .standard
+  }
+
   @EnvironmentObject var noteManager: PatroNoteManager
   @State private var showNoteEditor: Bool = false
   @State private var popoverDate: BSDate? = nil
@@ -99,6 +110,23 @@ struct CalendarView: View {
       }
     }
     .padding(16)
+    .background {
+        if currentTheme == .himalaya {
+            ZStack {
+                Color.blue.opacity(0.01) // Very light to let particles show
+                LinearGradient(colors: [.blue.opacity(0.04), .clear], startPoint: .top, endPoint: .bottom)
+            }
+            .ignoresSafeArea()
+        } else if currentTheme == .terai {
+            ZStack {
+                Color.green.opacity(0.01)
+                LinearGradient(colors: [.green.opacity(0.04), .clear], startPoint: .top, endPoint: .bottom)
+            }
+            .ignoresSafeArea()
+        } else {
+            Color.clear.ignoresSafeArea()
+        }
+    }
   }
 
   // MARK: - Header Section
@@ -108,9 +136,14 @@ struct CalendarView: View {
       HStack(spacing: 12) {
         Button(action: { navigate(-1) }) {
           Image(systemName: "chevron.left")
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 10, weight: .bold))
             .frame(width: 32, height: 32)
-            .background(Color.secondary.opacity(0.1), in: Circle())
+            .background(
+                currentTheme == .himalaya ? Color.blue.opacity(0.12) : 
+                currentTheme == .terai ? Color.green.opacity(0.12) : 
+                Color.secondary.opacity(0.12), 
+                in: Circle()
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -143,11 +176,17 @@ struct CalendarView: View {
 
         Button(action: { navigate(1) }) {
           Image(systemName: "chevron.right")
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 10, weight: .bold))
             .frame(width: 32, height: 32)
-            .background(Color.secondary.opacity(0.1), in: Circle())
+            .background(
+                currentTheme == .himalaya ? Color.blue.opacity(0.12) : 
+                currentTheme == .terai ? Color.green.opacity(0.12) : 
+                Color.secondary.opacity(0.12), 
+                in: Circle()
+            )
             .contentShape(Rectangle())
         }
+
         .buttonStyle(.plain)
       }
       .foregroundStyle(.primary)
@@ -202,7 +241,11 @@ struct CalendarView: View {
       ForEach(BhitteCalendar.shared.weekDays, id: \.self) { day in
         Text(day)
           .font(.system(size: 12, weight: .bold))
-          .foregroundColor(day == "शनि" ? .red : .secondary)
+          .foregroundColor(day == "शनि" ? .red : 
+              currentTheme == .himalaya ? Color.blue.opacity(0.7) : 
+              currentTheme == .terai ? Color.green.opacity(0.7) : 
+              .secondary
+          )
           .frame(maxWidth: .infinity)
       }
     }
@@ -234,7 +277,9 @@ struct CalendarView: View {
             selectedDate: selectedDate,
             displayYear: displayYear,
             displayMonth: displayMonth,
-            isAISelection: isAISelection
+            isAISelection: isAISelection,
+            design: design,
+            theme: currentTheme
           )
           .contentShape(Rectangle())
           .onTapGesture { 
@@ -272,57 +317,82 @@ struct CalendarView: View {
   // MARK: - Footer Section
   private var footerSection: some View {
     HStack(alignment: .center) {
-      Group {
-        if let sel = selectedDate {
-          let isToday =
-            today?.year == sel.year && today?.month == sel.month && today?.day == sel.day
-          let holiday = BhitteCalendar.shared.holidayText(
-            year: sel.year, month: sel.month, day: sel.day)
-          let upcoming =
-            isToday
-            ? BhitteCalendar.shared.nextHoliday(from: sel.year, month: sel.month, day: sel.day)
-            : nil
-
-          VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 4) {
-              Text(
-                "\(BhitteCalendar.shared.months[sel.month - 1]) \(BhitteCalendar.shared.toNepaliDigits(sel.day))"
-              )
-              .font(.system(size: 10, weight: .bold))
-                
-
-              Text(getEnglishDay(year: sel.year, month: sel.month, day: sel.day))
-                .font(.system(size: 9, weight: .medium))
-                .opacity(0.6)
+      ZStack(alignment: .leading) {
+        // Theme specific background accents
+        if currentTheme == .himalaya {
+            HStack {
+                Spacer()
+                HimalayaIconView()
+                    .frame(width: 80, height: 40)
+                    .opacity(0.15)
+                    .offset(x: 10, y: 15)
             }
-            .foregroundStyle(.secondary)
+        } else if currentTheme == .terai {
+            HStack {
+                Spacer()
+                HillIconView()
+                    .frame(width: 80, height: 40)
+                    .opacity(0.15)
+                    .offset(x: 10, y: 15)
+            }
+        }
 
-            Group {
-              if let holidayText = holiday {
-                Text(holidayText)
-                  .font(.system(size: 16, weight: .semibold))
-                  .foregroundStyle(.red)
-              } else if let upcomingHoliday = upcoming {
-                HStack(spacing: 4) {
-                  Text("\(BhitteCalendar.shared.toNepaliDigits(upcomingHoliday.daysAway)) दिन मा")
-                    .foregroundStyle(.white)
-                  Text(upcomingHoliday.text)
-                    .foregroundStyle(.red)
-                }
-                .font(.system(size: 12, weight: .medium))
-              } else {
-                Text(isToday ? "No upcoming holidays" : "No holiday")
-                  .font(.system(size: 12))
-                  .foregroundStyle(.tertiary)
+        Group {
+          if let sel = selectedDate {
+            let isToday =
+              today?.year == sel.year && today?.month == sel.month && today?.day == sel.day
+            let holiday = BhitteCalendar.shared.holidayText(
+              year: sel.year, month: sel.month, day: sel.day)
+            let upcoming =
+              isToday
+              ? BhitteCalendar.shared.nextHoliday(from: sel.year, month: sel.month, day: sel.day)
+              : nil
+
+            VStack(alignment: .leading, spacing: 6) {
+              HStack(spacing: 4) {
+                Text(
+                  "\(BhitteCalendar.shared.months[sel.month - 1]) \(BhitteCalendar.shared.toNepaliDigits(sel.day))"
+                )
+                .font(.system(size: 10, weight: .bold))
+                  
+
+                Text(getEnglishDay(year: sel.year, month: sel.month, day: sel.day))
+                  .font(.system(size: 9, weight: .bold))
+                  .opacity(0.6)
               }
+              .foregroundStyle(.secondary)
+
+              Group {
+                if let holidayText = holiday {
+                  Text(holidayText)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.red)
+                } else if let upcomingHoliday = upcoming {
+                  HStack(spacing: 4) {
+                    Text("\(BhitteCalendar.shared.toNepaliDigits(upcomingHoliday.daysAway)) दिन मा")
+                      .foregroundStyle(
+                          currentTheme == .terai ? .green : 
+                          currentTheme == .himalaya ? .blue : 
+                          .primary
+                      )
+                    Text(upcomingHoliday.text)
+                      .foregroundStyle(.red)
+                  }
+                  .font(.system(size: 12, weight: .bold))
+                } else {
+                  Text(isToday ? "No upcoming holidays" : "No holiday")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.tertiary)
+                }
+              }
+              .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+          } else {
+            Text("Select a date")
+              .font(.system(size: 11, weight: .bold))
+              .foregroundStyle(Color.secondary.opacity(0.5))
+              .frame(maxWidth: .infinity, alignment: .leading)
           }
-        } else {
-          Text("Select a date")
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(Color.secondary.opacity(0.5))
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -335,18 +405,42 @@ struct CalendarView: View {
           userInfo: ["mode": "settings"]
         )
       } label: {
-        Image(systemName: "gearshape")
-          .font(.system(size: 13, weight: .semibold))
+        Image(systemName: "gearshape.fill")
+          .font(.system(size: 14, weight: .bold))
           .foregroundStyle(.secondary)
+          .frame(width: 32, height: 32)
+          .background(
+              currentTheme == .himalaya ? Color.blue.opacity(0.12) :
+              currentTheme == .terai ? Color.green.opacity(0.12) :
+              Color.secondary.opacity(0.12), 
+              in: Circle()
+          )
       }
       .buttonStyle(.plain)
     }
     .padding(.horizontal, 14)
-    .padding(.vertical, 10)
-    .background(
-      Color.secondary.opacity(0.04),
-      in: RoundedRectangle(cornerRadius: 10)
-    )
+    .padding(.vertical, 12)
+    .background {
+        if currentTheme == .himalaya {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(LinearGradient(colors: [Color.blue.opacity(0.1), Color.blue.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.blue.opacity(0.15), lineWidth: 1)
+                )
+        } else if currentTheme == .terai {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(LinearGradient(colors: [Color.green.opacity(0.1), Color.green.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.green.opacity(0.15), lineWidth: 1)
+                )
+        } else {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.secondary.opacity(0.06))
+        }
+    }
+    .clipShape(RoundedRectangle(cornerRadius: 12))
   }
 
   // MARK: - Helper Methods
@@ -547,12 +641,20 @@ private struct CalendarCellView: View {
   let displayYear: Int
   let displayMonth: Int
   let isAISelection: Bool
+  let design: CalendarDesign
+  let theme: AppTheme
 
   @EnvironmentObject var noteManager: PatroNoteManager
 
   @State private var isCurrentMonth = false
 
-  private let cellCornerRadius: CGFloat = 6
+  private var cellCornerRadius: CGFloat {
+    switch design {
+    case .classic: return 6
+    case .modern: return 12
+    case .minimalist: return 4
+    }
+  }
 
   var body: some View {
     let isSelected: Bool = {
@@ -572,18 +674,34 @@ private struct CalendarCellView: View {
       if !cell.isEmpty {
         // Background - today is red, AI selection is blue, manual selection is light gray
         if cell.isToday {
-          RoundedRectangle(cornerRadius: cellCornerRadius)
-            .fill(Color.red)
+          if design == .minimalist {
+            Circle()
+              .fill(Color.red)
+              .frame(width: 32, height: 32)
+          } else {
+            RoundedRectangle(cornerRadius: cellCornerRadius)
+              .fill(design == .modern ? Color.red.gradient : Color.red.gradient)
+          }
         } else if isSelected && isAISelection {
           RoundedRectangle(cornerRadius: cellCornerRadius)
-            .fill(Color.blue)
+            .fill(design == .modern ? Color.blue.gradient : Color.blue.gradient)
         } else if isSelected {
-          RoundedRectangle(cornerRadius: cellCornerRadius)
-            .fill(Color.secondary.opacity(0.15))
+          if design == .minimalist {
+            RoundedRectangle(cornerRadius: cellCornerRadius)
+              .strokeBorder(theme == .himalaya ? Color.blue : theme == .terai ? Color.green : Color.primary.opacity(0.3), lineWidth: 1)
+          } else {
+            RoundedRectangle(cornerRadius: cellCornerRadius)
+              .fill(theme == .himalaya ? Color.blue.opacity(0.15) : theme == .terai ? Color.green.opacity(0.15) : Color.secondary.opacity(0.15))
+          }
         } else {
-          RoundedRectangle(cornerRadius: cellCornerRadius)
-            .fill(Color.secondary.opacity(0.15))
-            .opacity(0) // Hide background for non-selected cells
+          if design == .classic {
+            RoundedRectangle(cornerRadius: cellCornerRadius)
+              .fill(Color.secondary.opacity(0.15))
+              .opacity(0) // Hide background for non-selected cells
+          } else if design == .modern {
+             RoundedRectangle(cornerRadius: cellCornerRadius)
+              .fill(theme == .himalaya ? Color.blue.opacity(0.04) : theme == .terai ? Color.green.opacity(0.04) : Color.secondary.opacity(0.03))
+          }
         }
 
         // Note indicator
@@ -591,10 +709,17 @@ private struct CalendarCellView: View {
           VStack {
             HStack {
               Spacer()
-              Image(systemName: "doc.text")
-                .font(.system(size: 7))
-                .foregroundStyle((cell.isToday || (isSelected && isAISelection)) ? .white : .secondary)
-                .padding(4)
+              if design == .minimalist {
+                  Circle()
+                    .fill(cell.isToday ? .white : theme == .himalaya ? .blue : theme == .terai ? .green : .blue)
+                    .frame(width: 4, height: 4)
+                    .padding(4)
+              } else {
+                  Image(systemName: "doc.text")
+                    .font(.system(size: 7))
+                    .foregroundStyle((cell.isToday || (isSelected && isAISelection)) ? .white : theme == .himalaya ? .blue : theme == .terai ? .green : .secondary)
+                    .padding(4)
+              }
             }
             Spacer()
           }
@@ -606,7 +731,7 @@ private struct CalendarCellView: View {
 
           // Nepali day number
           Text(cell.nepaliDay)
-            .font(.system(size: 18, weight: (cell.isToday || (isSelected && isAISelection)) ? .semibold : .regular, design: .rounded))
+            .font(.system(size: design == .modern ? 20 : 18, weight: (cell.isToday || (isSelected && isAISelection)) ? .semibold : .regular, design: .rounded))
             .foregroundStyle(
               (cell.isToday || (isSelected && isAISelection))
                 ? Color.white
@@ -622,7 +747,7 @@ private struct CalendarCellView: View {
           // English day number
           HStack {
             Spacer(minLength: 0)
-            if !cell.englishDay.isEmpty {
+            if !cell.englishDay.isEmpty && design != .minimalist {
               Text(cell.englishDay)
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
                 .foregroundStyle(
@@ -669,4 +794,70 @@ private struct CalendarCellView: View {
       isCurrentMonth = (cell.bsYear == displayYear && cell.bsMonth == displayMonth)
     }
   }
+}
+
+// MARK: - Custom Theme Icons
+struct HimalayaIconView: View {
+    var body: some View {
+        Canvas { context, size in
+            let scale = size.width / 512.0
+            
+            // Back Mountain
+            var backMountain = Path()
+            backMountain.move(to: CGPoint(x: 221.99 * scale, y: 308.864 * scale))
+            backMountain.addLine(to: CGPoint(x: 503.648 * scale, y: 308.864 * scale))
+            backMountain.addLine(to: CGPoint(x: 435.495 * scale, y: 190.829 * scale))
+            backMountain.addLine(to: CGPoint(x: 350.158 * scale, y: 308.835 * scale))
+            backMountain.closeSubpath()
+            context.fill(backMountain, with: .color(Color(red: 0.29, green: 0.45, blue: 0.51)))
+            
+            // Front Mountain
+            var frontMountain = Path()
+            frontMountain.move(to: CGPoint(x: 10.066 * scale, y: 308.835 * scale))
+            frontMountain.addLine(to: CGPoint(x: 350.158 * scale, y: 308.835 * scale))
+            frontMountain.addLine(to: CGPoint(x: 276.607 * scale, y: 151.225 * scale))
+            frontMountain.addLine(to: CGPoint(x: 10.066 * scale, y: 308.835 * scale))
+            frontMountain.closeSubpath()
+            context.fill(frontMountain, with: .color(Color(red: 0.29, green: 0.45, blue: 0.51)))
+            
+            // Snow Caps
+            var cap1 = Path()
+            cap1.move(to: CGPoint(x: 442.728 * scale, y: 178.358 * scale))
+            cap1.addLine(to: CGPoint(x: 423.974 * scale, y: 206.089 * scale))
+            cap1.addLine(to: CGPoint(x: 387 * scale, y: 206.089 * scale))
+            cap1.addLine(to: CGPoint(x: 410 * scale, y: 150 * scale))
+            cap1.closeSubpath()
+            context.fill(cap1, with: .color(.white))
+            
+            var cap2 = Path()
+            cap2.move(to: CGPoint(x: 276.607 * scale, y: 151.225 * scale))
+            cap2.addLine(to: CGPoint(x: 254 * scale, y: 184 * scale))
+            cap2.addLine(to: CGPoint(x: 216 * scale, y: 130 * scale))
+            cap2.closeSubpath()
+            context.fill(cap2, with: .color(.white))
+        }
+    }
+}
+
+struct HillIconView: View {
+    var body: some View {
+        Canvas { context, size in
+            let scale = size.width / 512.0
+            
+            // Simplified Hill Path based on the SVG
+            var hill = Path()
+            hill.move(to: CGPoint(x: 83.335 * scale, y: 413.542 * scale))
+            hill.addQuadCurve(to: CGPoint(x: 261.604 * scale, y: 299.381 * scale), control: CGPoint(x: 180 * scale, y: 240 * scale))
+            hill.addQuadCurve(to: CGPoint(x: 457.556 * scale, y: 413.542 * scale), control: CGPoint(x: 350 * scale, y: 350 * scale))
+            hill.addLine(to: CGPoint(x: 83.335 * scale, y: 413.542 * scale))
+            hill.closeSubpath()
+            
+            context.fill(hill, with: .color(.green))
+            
+            // Sun (Modern addition)
+            var sun = Path()
+            sun.addEllipse(in: CGRect(x: 350 * scale, y: 100 * scale, width: 60 * scale, height: 60 * scale))
+            context.fill(sun, with: .color(.orange.opacity(0.8)))
+        }
+    }
 }

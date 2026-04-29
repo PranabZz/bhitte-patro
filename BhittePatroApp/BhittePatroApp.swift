@@ -378,23 +378,66 @@ enum CalendarViewMode: String, CaseIterable {
     }
 }
 
+enum CalendarDesign: String, CaseIterable, Identifiable {
+    case classic
+    case modern
+    case minimalist
+    
+    var id: String { self.rawValue }
+    
+    var title: String {
+        switch self {
+        case .classic: return "Classic"
+        case .modern: return "Modern"
+        case .minimalist: return "Minimalist"
+        }
+    }
+}
 
+enum AppTheme: String, CaseIterable, Identifiable {
+    case standard
+    case himalaya
+    case terai
+    
+    var id: String { self.rawValue }
+    
+    var title: String {
+        switch self {
+        case .standard: return "Standard"
+        case .himalaya: return "Himalaya (Frosty)"
+        case .terai: return "Terai (Green)"
+        }
+    }
+}
 
 // MARK: - App
 @main
 struct BhittePatroApp: App {
     @StateObject private var dateUpdater = DateUpdater()
     @StateObject private var noteManager = PatroNoteManager.shared
+    @AppStorage("CalendarDesign") private var calendarDesign: String = CalendarDesign.classic.rawValue
+    @AppStorage("AppTheme") private var appTheme: String = AppTheme.standard.rawValue
 
     var body: some Scene {
         // Menu bar extra remains your primary UI
         MenuBarExtra {
-            VCenterView()
-                .environmentObject(dateUpdater)
-                .environmentObject(noteManager)
-                .onAppear {
-                    CalendarManager.shared.checkAndAutoUpdate()
-                }
+            ZStack {
+                // Base background for the window
+                Color(NSColor.windowBackgroundColor).opacity(0.8)
+                    .background(Material.ultraThin)
+                    .ignoresSafeArea()
+
+                // Background Theme Animations
+                ThemeBackgroundView(theme: AppTheme(rawValue: appTheme) ?? .standard)
+                
+                VCenterView()
+                    .environmentObject(dateUpdater)
+                    .environmentObject(noteManager)
+                    .background(Color.clear) // Ensure transparency
+                    .onAppear {
+                        CalendarManager.shared.checkAndAutoUpdate()
+                    }
+            }
         } label: {
             HStack {
                 Image(systemName: "calendar")
@@ -418,6 +461,102 @@ struct BhittePatroApp: App {
                 .keyboardShortcut(",", modifiers: .command)
             }
         }
+    }
+}
+
+// MARK: - Theme Animations
+struct ThemeBackgroundView: View {
+    let theme: AppTheme
+    
+    var body: some View {
+        ZStack {
+            if theme == .himalaya {
+                ParticleSystemView(particleImage: "snow", color: .white.opacity(0.4), count: 8)
+            } else if theme == .terai {
+                ParticleSystemView(particleImage: "leaf.fill", color: .green.opacity(0.2), count: 5)
+            }
+        }
+        .ignoresSafeArea()
+    }
+}
+
+struct ParticleSystemView: View {
+    let particleImage: String
+    let color: Color
+    let count: Int
+    
+    @State private var particles: [Particle] = []
+    let timer = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()
+
+    struct Particle: Identifiable {
+        let id = UUID()
+        var x: CGFloat
+        var y: CGFloat
+        var speedY: CGFloat
+        var swayOffset: CGFloat
+        var swaySpeed: Double
+        var swayWidth: CGFloat
+        var scale: CGFloat
+        var rotation: Double
+        var rotationSpeed: Double
+        var opacity: Double
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                ForEach(particles) { particle in
+                    Image(systemName: particleImage)
+                        .font(.system(size: 14))
+                        .foregroundStyle(color)
+                        .scaleEffect(particle.scale)
+                        .rotationEffect(.degrees(particle.rotation))
+                        .position(
+                            x: particle.x + sin(particle.swayOffset) * particle.swayWidth,
+                            y: particle.y
+                        )
+                        .opacity(particle.opacity)
+                }
+            }
+            .onAppear {
+                for _ in 0..<count {
+                    particles.append(createParticle(in: geometry.size))
+                }
+            }
+            .onReceive(timer) { _ in
+                for i in particles.indices {
+                    particles[i].y += particles[i].speedY
+                    particles[i].swayOffset += particles[i].swaySpeed
+                    particles[i].rotation += particles[i].rotationSpeed
+                    
+                    // Fade out near bottom
+                    let remainingHeight = geometry.size.height - particles[i].y
+                    if remainingHeight < 50 {
+                        particles[i].opacity = max(0, Double(remainingHeight / 50.0))
+                    }
+                    
+                    // Reset if off screen
+                    if particles[i].y > geometry.size.height + 20 {
+                        particles[i] = createParticle(in: geometry.size, startAtTop: true)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func createParticle(in size: CGSize, startAtTop: Bool = false) -> Particle {
+        Particle(
+            x: CGFloat.random(in: -20...(size.width + 20)),
+            y: startAtTop ? -20 : CGFloat.random(in: 0...size.height),
+            speedY: CGFloat.random(in: 0.8...2.5),
+            swayOffset: Double.random(in: 0...(Double.pi * 2)),
+            swaySpeed: Double.random(in: 0.02...0.06),
+            swayWidth: CGFloat.random(in: 10...40),
+            scale: CGFloat.random(in: 0.3...1.0),
+            rotation: Double.random(in: 0...360),
+            rotationSpeed: Double.random(in: -3...3),
+            opacity: Double.random(in: 0.5...1.0)
+        )
     }
 }
 
